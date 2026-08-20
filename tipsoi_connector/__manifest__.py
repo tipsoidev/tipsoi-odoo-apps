@@ -6,18 +6,42 @@
 Tipsoi Connector
 ================
 
-Pulls devices, people and attendance out of Tipsoi over REST into native Odoo records.
-Direct API integration -- no Kafka, no middleware.
+Brings Tipsoi people, devices and attendance into Odoo as native records, over REST.
+Direct API integration -- no middleware to run, nothing extra to keep alive.
+
+About Tipsoi
+------------
+
+Tipsoi combines AI-powered biometric attendance devices with a complete employee
+management platform -- hardware and software as one system. "One system. Total control."
+
+The platform covers a centralized workforce dashboard, AI face recognition with sub-second
+identification, shift scheduling and rostering, leave management, field-team GPS tracking,
+biometric access control, visitor and parking management, notifications by SMS, email and
+push, and payroll integration. Its devices use facial recognition, fingerprint and RFID,
+with infrared and RGB cameras. It runs from small businesses to multinationals, across
+manufacturing, healthcare, education, government, retail, financial services, agriculture,
+construction and hospitality.
+
+This module is for organisations already running Tipsoi who also run Odoo.
+
+One system of record
+--------------------
 
 One backend record per client, and its type selects the whole pipeline:
 
-* **Device Portal only** -- raw punches from the device API, paired here.
-* **Tipsoi app (HRM)** -- employees, masters and attendance from the HRM API.
+* Device Portal only -- raw punches from the device API, paired in Odoo.
+* Tipsoi app (HRM) -- employees, org masters and attendance from the HRM API.
 
 The two never mix, so person records and employee identifiers are managed in exactly one
-place -- which is what stops the two systems disagreeing about who someone is.
+place. That is what stops the two systems disagreeing about who someone is.
 
-Learn more at https://tipsoi.ai/
+Links
+-----
+
+* Tipsoi: https://tipsoi.ai/
+* Inovace Technologies, who build Tipsoi: https://inovacetech.com/
+* Support: support@tipsoi.ai
 """,
     "version": "17.0.1.0.0",
     "category": "Human Resources/Attendances",
