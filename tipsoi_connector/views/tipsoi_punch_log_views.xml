@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_tipsoi_punch_log_list" model="ir.ui.view">
+    <field name="name">tipsoi.punch.log.list</field>
+    <field name="model">tipsoi.punch.log</field>
+    <field name="arch" type="xml">
+      <list string="Punch Logs" create="false"
+            decoration-danger="state == 'error'"
+            decoration-warning="state in ('unmatched', 'unpaired')"
+            decoration-muted="state == 'duplicate'"
+            decoration-success="state == 'paired'">
+        <header>
+          <button name="action_pair_now" type="object" string="Pair now"
+                  class="btn-primary"/>
+          <button name="action_open_attendance" type="object" string="Attendance"/>
+        </header>
+        <field name="punch_time_utc"/>
+        <field name="employee_id"/>
+        <field name="person_identifier"/>
+        <field name="device_id" optional="show"/>
+        <field name="device_identifier" optional="hide"/>
+        <field name="direction"/>
+        <field name="punch_method" optional="show"/>
+        <field name="punch_day" optional="hide"/>
+        <field name="punch_time_raw" optional="hide"/>
+        <field name="sync_time_raw" optional="hide"/>
+        <field name="log_type_raw" optional="hide"/>
+        <field name="location" optional="hide"/>
+        <field name="rfid" optional="hide"/>
+        <field name="tipsoi_log_id" optional="hide"/>
+        <field name="attendance_id" optional="hide"/>
+        <field name="state_reason" optional="hide"/>
+        <field name="backend_id" optional="hide"/>
+        <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+        <field name="state" widget="badge"
+               decoration-success="state == 'paired'"
+               decoration-warning="state in ('unmatched', 'unpaired')"
+               decoration-danger="state == 'error'"
+               decoration-muted="state == 'duplicate'"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_punch_log_form" model="ir.ui.view">
+    <field name="name">tipsoi.punch.log.form</field>
+    <field name="model">tipsoi.punch.log</field>
+    <field name="arch" type="xml">
+      <form string="Punch Log" create="false">
+        <header>
+          <button name="action_pair_now" type="object" string="Pair now"
+                  class="oe_highlight" icon="fa-link"
+                  invisible="state in ('paired', 'duplicate')"/>
+          <button name="action_open_attendance" type="object" string="Attendance"
+                  icon="fa-calendar-check-o" invisible="not attendance_id"/>
+          <field name="state" widget="statusbar"
+                 statusbar_visible="new,matched,paired"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1><field name="name" readonly="1"/></h1>
+          </div>
+
+          <div class="alert alert-warning" role="alert" invisible="state != 'unmatched'">
+            This punch carries a Tipsoi identifier that matches no Odoo employee, so there
+            is nobody to attribute it to. Use Link to Employee to resolve it permanently.
+          </div>
+          <div class="alert alert-danger" role="alert"
+               invisible="state != 'error' or not state_reason">
+            <field name="state_reason" readonly="1" nolabel="1"/>
+          </div>
+
+          <group>
+            <group string="Who">
+              <field name="employee_id"/>
+              <field name="person_identifier"/>
+              <field name="rfid"/>
+              <field name="backend_id"/>
+              <field name="company_id" groups="base.group_multi_company"/>
+            </group>
+            <group string="Where">
+              <field name="device_id"/>
+              <field name="device_identifier"/>
+              <field name="location"/>
+              <field name="tipsoi_log_id" readonly="1"/>
+            </group>
+          </group>
+
+          <group>
+            <group string="When">
+              <field name="punch_time_utc" readonly="1"/>
+              <field name="punch_time_raw" readonly="1"/>
+              <field name="sync_time_raw" readonly="1"/>
+              <field name="punch_day" readonly="1"/>
+            </group>
+            <group string="What">
+              <field name="direction"/>
+              <field name="punch_method"/>
+              <field name="log_type_raw" readonly="1"/>
+              <field name="attendance_id" readonly="1"/>
+            </group>
+          </group>
+
+          <div class="text-muted">
+            The original strings are kept beside the parsed time on purpose. A small number
+            of devices are configured to return punch time already converted to GMT, while
+            every other row arrives in the application's own timezone, and nothing in the
+            payload says which. When a parsed time looks wrong by a fixed number of hours,
+            the raw string is the only record of what actually arrived.
+          </div>
+
+          <notebook>
+            <page string="Raw payload" name="raw_payload">
+              <div class="text-muted mb-2">
+                The row exactly as Tipsoi returned it.
+              </div>
+              <field name="raw_payload" readonly="1" nolabel="1"/>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_punch_log_search" model="ir.ui.view">
+    <field name="name">tipsoi.punch.log.search</field>
+    <field name="model">tipsoi.punch.log</field>
+    <field name="arch" type="xml">
+      <search string="Punch Logs">
+        <field name="person_identifier"/>
+        <field name="employee_id"/>
+        <field name="device_id"/>
+        <field name="device_identifier"/>
+        <field name="rfid"/>
+        <field name="backend_id"/>
+        <filter name="state_unmatched" string="No employee"
+                domain="[('state','=','unmatched')]"/>
+        <filter name="state_unpaired" string="Unpaired"
+                domain="[('state','=','unpaired')]"/>
+        <filter name="state_error" string="Errors" domain="[('state','=','error')]"/>
+        <filter name="state_new" string="New" domain="[('state','=','new')]"/>
+        <filter name="state_matched" string="Matched" domain="[('state','=','matched')]"/>
+        <filter name="state_paired" string="Paired" domain="[('state','=','paired')]"/>
+        <filter name="state_duplicate" string="Duplicates"
+                domain="[('state','=','duplicate')]"/>
+        <separator/>
+        <filter name="today" string="Today"
+                domain="[('punch_day','&gt;=', context_today().strftime('%Y-%m-%d')),
+                         ('punch_day','&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+        <separator/>
+        <filter name="direction_in" string="In" domain="[('direction','=','in')]"/>
+        <filter name="direction_out" string="Out" domain="[('direction','=','out')]"/>
+        <group expand="0" string="Group By">
+          <filter name="group_state" string="State" context="{'group_by': 'state'}"/>
+          <filter name="group_employee" string="Employee"
+                  context="{'group_by': 'employee_id'}"/>
+          <filter name="group_device" string="Device" context="{'group_by': 'device_id'}"/>
+          <filter name="group_direction" string="Direction"
+                  context="{'group_by': 'direction'}"/>
+          <filter name="group_day" string="Day" context="{'group_by': 'punch_day:day'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_punch_log" model="ir.actions.act_window">
+    <field name="name">Punch Logs</field>
+    <field name="res_model">tipsoi.punch.log</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="view_tipsoi_punch_log_search"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">No punches yet</p>
+      <p>Punches arrive from the Device Portal. Open the backend and press Poll Punches,
+         or wait for the scheduled poll.</p>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_unmatched_punch" model="ir.actions.act_window">
+    <field name="name">Unmatched Punches</field>
+    <field name="res_model">tipsoi.punch.log</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="view_tipsoi_punch_log_search"/>
+    <field name="domain">[('state','=','unmatched')]</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">Nothing unmatched</p>
+      <p>An unmatched punch is one whose Tipsoi identifier matches no Odoo employee, so
+         the connector knows a person walked past a reader but not which person. The punch
+         is kept rather than dropped -- nothing is lost while it waits here.</p>
+      <p>Select the rows and use <b>Link to Employee</b> from the Action menu. That writes
+         the identifier onto the employee, so these punches and every future one from the
+         same identifier resolve on their own.</p>
+    </field>
+  </record>
+
+</odoo>

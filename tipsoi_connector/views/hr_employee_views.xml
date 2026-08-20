@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_employee_form_tipsoi" model="ir.ui.view">
+    <field name="name">hr.employee.form.tipsoi</field>
+    <field name="model">hr.employee</field>
+    <field name="inherit_id" ref="hr.view_employee_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//notebook" position="inside">
+        <page string="Tipsoi" name="tipsoi" groups="tipsoi_connector.group_tipsoi_user">
+          <div class="mb-3 d-flex flex-wrap gap-1" name="tipsoi_buttons"
+               groups="tipsoi_connector.group_tipsoi_admin">
+            <button name="action_tipsoi_push" type="object" string="Push to Tipsoi"
+                    class="btn-primary" icon="fa-cloud-upload"
+                    invisible="not tipsoi_identifier"/>
+            <button name="action_tipsoi_upload_photo" type="object" string="Send photo"
+                    class="btn-secondary" icon="fa-camera"
+                    invisible="not tipsoi_identifier"/>
+            <button name="action_tipsoi_remove_photo" type="object"
+                    string="Remove photo in Tipsoi" class="btn-secondary"
+                    icon="fa-eraser" invisible="not tipsoi_identifier"/>
+            <button name="action_tipsoi_reactivate" type="object"
+                    string="Reactivate in Tipsoi" class="btn-secondary"
+                    icon="fa-undo" invisible="not tipsoi_identifier"/>
+            <button name="action_tipsoi_delete_remote" type="object"
+                    string="Delete in Tipsoi" class="btn-secondary" icon="fa-trash"
+                    invisible="not tipsoi_identifier"
+                    confirm="This deletes the person in Tipsoi outright. A departure is
+                             almost always the better choice: a hard delete removes the
+                             person that existing attendance rows point at, in Tipsoi and
+                             in any report drawn from it. Continue only if this record
+                             was created in error."/>
+          </div>
+
+          <div class="alert alert-warning" role="alert"
+               invisible="tipsoi_photo_state != 'rejected'">
+            <p class="mb-1"><b>Tipsoi rejected this photo.</b></p>
+            <p class="mb-1">It will not work on the readers, and a different picture is
+               needed -- a rejection is a final answer about that image, not a transient
+               failure, so the connector does not send it again.</p>
+            <field name="tipsoi_photo_error" readonly="1" nolabel="1"/>
+          </div>
+
+          <group>
+            <group string="Link">
+              <field name="tipsoi_identifier"/>
+              <field name="tipsoi_backend_id"/>
+              <field name="tipsoi_card_no"/>
+              <field name="tipsoi_status"/>
+              <field name="tipsoi_last_sync"/>
+              <field name="tipsoi_push_pending"/>
+            </group>
+            <group string="Remote IDs">
+              <field name="tipsoi_person_id"/>
+              <field name="tipsoi_employee_id"/>
+              <field name="tipsoi_employee_office_id"/>
+            </group>
+          </group>
+
+          <group>
+            <group string="Shift and workplace">
+              <field name="tipsoi_shift_start"/>
+              <field name="tipsoi_shift_end"/>
+              <field name="tipsoi_workplace_name"/>
+            </group>
+            <group string="Photo">
+              <field name="tipsoi_photo_state" widget="badge"
+                     decoration-success="tipsoi_photo_state == 'done'"
+                     decoration-warning="tipsoi_photo_state == 'pending'"
+                     decoration-danger="tipsoi_photo_state in ('rejected', 'error')"/>
+              <field name="tipsoi_photo_error_code"
+                     invisible="not tipsoi_photo_error_code"/>
+              <field name="tipsoi_photo_url" widget="url"
+                     invisible="not tipsoi_photo_url"/>
+              <field name="tipsoi_photo_error"
+                     invisible="tipsoi_photo_state == 'rejected' or not tipsoi_photo_error"/>
+            </group>
+          </group>
+        </page>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_employee_list_tipsoi" model="ir.ui.view">
+    <field name="name">hr.employee.list.tipsoi</field>
+    <field name="model">hr.employee</field>
+    <field name="inherit_id" ref="hr.view_employee_tree"/>
+    <field name="arch" type="xml">
+      <field name="name" position="after">
+        <field name="tipsoi_identifier" optional="hide"
+               groups="tipsoi_connector.group_tipsoi_user"/>
+      </field>
+    </field>
+  </record>
+
+</odoo>

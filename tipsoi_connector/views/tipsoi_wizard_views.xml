@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Manual sync -->
+
+  <record id="view_tipsoi_manual_sync_form" model="ir.ui.view">
+    <field name="name">tipsoi.manual.sync.form</field>
+    <field name="model">tipsoi.manual.sync</field>
+    <field name="arch" type="xml">
+      <form string="Manual Sync">
+        <div class="alert alert-warning" role="alert" invisible="not mode_warning">
+          <field name="mode_warning" readonly="1" nolabel="1"/>
+        </div>
+
+        <group>
+          <group>
+            <field name="backend_id"/>
+            <field name="job"/>
+          </group>
+          <group invisible="job not in ('punches', 'attendance')">
+            <field name="date_from"/>
+            <field name="date_to"/>
+          </group>
+        </group>
+
+        <div class="text-muted" invisible="job not in ('punches', 'attendance')">
+          Leaving the window empty falls back to the backend's own cursor, which is what
+          the scheduled run uses. Set it only to re-read a period on purpose.
+        </div>
+
+        <group invisible="not result">
+          <field name="result" readonly="1" nolabel="1"/>
+        </group>
+
+        <footer>
+          <button name="action_run" type="object" string="Run" class="oe_highlight"/>
+          <button string="Cancel" class="btn-secondary" special="cancel"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_manual_sync" model="ir.actions.act_window">
+    <field name="name">Manual Sync</field>
+    <field name="res_model">tipsoi.manual.sync</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_tipsoi_manual_sync_form"/>
+    <field name="target">new</field>
+  </record>
+
+  <!-- Link punches to an employee -->
+
+  <record id="view_tipsoi_link_employee_form" model="ir.ui.view">
+    <field name="name">tipsoi.link.employee.form</field>
+    <field name="model">tipsoi.link.employee</field>
+    <field name="arch" type="xml">
+      <form string="Link to Employee">
+        <div class="text-muted mb-2">
+          An unmatched punch carries a Tipsoi identifier that no employee here claims.
+          Writing the identifier onto the employee resolves these punches and every future
+          one from the same identifier.
+        </div>
+
+        <group>
+          <field name="identifier" readonly="1"/>
+          <field name="employee_id"/>
+          <field name="set_identifier"/>
+        </group>
+
+        <group string="Selected punches">
+          <field name="punch_log_ids" readonly="1" nolabel="1">
+            <list create="false" delete="false" edit="false">
+              <field name="punch_time_utc"/>
+              <field name="person_identifier"/>
+              <field name="device_id"/>
+              <field name="direction"/>
+              <field name="state"/>
+            </list>
+          </field>
+        </group>
+
+        <group invisible="not result">
+          <field name="result" readonly="1" nolabel="1"/>
+        </group>
+
+        <footer>
+          <button name="action_link" type="object" string="Link" class="oe_highlight"/>
+          <button string="Cancel" class="btn-secondary" special="cancel"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_link_employee" model="ir.actions.act_window">
+    <field name="name">Link to Employee</field>
+    <field name="res_model">tipsoi.link.employee</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_tipsoi_link_employee_form"/>
+    <field name="target">new</field>
+    <field name="binding_model_id" ref="tipsoi_connector.model_tipsoi_punch_log"/>
+    <field name="binding_view_types">list</field>
+  </record>
+
+  <!-- Allocate / revoke people on devices -->
+
+  <record id="view_tipsoi_allocation_form" model="ir.ui.view">
+    <field name="name">tipsoi.allocation.form</field>
+    <field name="model">tipsoi.allocation</field>
+    <field name="arch" type="xml">
+      <form string="Allocate / Revoke on Devices">
+        <group>
+          <field name="backend_id"/>
+          <field name="action_type"/>
+        </group>
+        <group>
+          <field name="employee_ids" widget="many2many_tags"/>
+          <field name="device_ids" widget="many2many_tags"/>
+        </group>
+
+        <group invisible="state != 'done'">
+          <field name="result" readonly="1" nolabel="1"/>
+        </group>
+        <field name="state" invisible="1"/>
+
+        <footer>
+          <button name="action_apply" type="object" string="Apply" class="oe_highlight"
+                  invisible="state == 'done'"/>
+          <button string="Close" class="btn-secondary" special="cancel"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_allocation" model="ir.actions.act_window">
+    <field name="name">Allocate / Revoke on Devices</field>
+    <field name="res_model">tipsoi.allocation</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_tipsoi_allocation_form"/>
+    <field name="target">new</field>
+  </record>
+
+  <record id="action_tipsoi_allocation_employees" model="ir.actions.act_window">
+    <field name="name">Allocate / Revoke on Devices</field>
+    <field name="res_model">tipsoi.allocation</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_tipsoi_allocation_form"/>
+    <field name="target">new</field>
+    <field name="binding_model_id" ref="hr.model_hr_employee"/>
+    <field name="binding_view_types">list</field>
+  </record>
+
+  <record id="action_tipsoi_allocation_devices" model="ir.actions.act_window">
+    <field name="name">Allocate / Revoke on Devices</field>
+    <field name="res_model">tipsoi.allocation</field>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_tipsoi_allocation_form"/>
+    <field name="target">new</field>
+    <field name="binding_model_id" ref="tipsoi_connector.model_tipsoi_device"/>
+    <field name="binding_view_types">list</field>
+  </record>
+
+</odoo>

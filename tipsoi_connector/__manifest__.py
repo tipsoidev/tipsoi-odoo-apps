@@ -55,9 +55,19 @@ Links
     "data": [
         "security/tipsoi_security.xml",
         "security/ir.model.access.csv",
-        "views/tipsoi_backend_views.xml",
+        # Order matters here, and not only stylistically: the backend form carries stat
+        # buttons that resolve other actions' xml ids with %(...)d at data-load time, so
+        # every action it points at has to exist before it is parsed. Menus come last for
+        # the same reason.
+        "views/tipsoi_device_views.xml",
+        "views/tipsoi_punch_log_views.xml",
+        "views/tipsoi_day_attendance_views.xml",
+        "views/hr_employee_views.xml",
         "views/tipsoi_sync_run_views.xml",
+        "views/tipsoi_backend_views.xml",
+        "views/tipsoi_wizard_views.xml",
         "views/tipsoi_menus.xml",
+        "data/ir_cron.xml",
     ],
     "installable": True,
     "application": True,

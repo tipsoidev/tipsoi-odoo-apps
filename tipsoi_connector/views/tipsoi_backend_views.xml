@@ -9,9 +9,58 @@
         <header>
           <button name="action_test_connection" type="object" string="Test Connection"
                   class="oe_highlight" icon="fa-plug"/>
+          <button name="action_sync_devices" type="object" string="Sync Devices"
+                  icon="fa-tablet" invisible="state != 'ready'"/>
+          <button name="action_sync_employees" type="object" string="Sync Employees"
+                  icon="fa-users"
+                  invisible="state != 'ready' or backend_type != 'device_portal'"/>
+          <button name="action_poll_punches" type="object" string="Poll Punches"
+                  icon="fa-clock-o"
+                  invisible="state != 'ready' or backend_type != 'device_portal'"/>
+          <button name="action_pair_punches" type="object" string="Pair Punches"
+                  icon="fa-link"
+                  invisible="state != 'ready' or backend_type != 'device_portal'"/>
+          <button name="action_sync_attendance" type="object" string="Sync Attendance"
+                  icon="fa-cloud-download"
+                  invisible="state != 'ready' or backend_type != 'hrm'"/>
+          <button name="action_import_days" type="object" string="Import Days"
+                  icon="fa-calendar"
+                  invisible="state != 'ready' or backend_type != 'hrm'"/>
+          <button name="action_push_photos" type="object" string="Send Photos"
+                  icon="fa-camera" invisible="state != 'ready'"/>
           <field name="state" widget="statusbar" statusbar_visible="draft,ready"/>
         </header>
         <sheet>
+          <div class="oe_button_box" name="button_box">
+            <button name="action_open_devices" type="object"
+                    class="oe_stat_button" icon="fa-tablet">
+              <field name="device_count" widget="statinfo" string="Devices"/>
+            </button>
+            <button name="action_open_employees" type="object"
+                    class="oe_stat_button" icon="fa-users">
+              <field name="employee_count" widget="statinfo" string="Employees"/>
+            </button>
+            <button name="action_open_punches" type="object"
+                    class="oe_stat_button" icon="fa-clock-o"
+                    invisible="backend_type != 'device_portal'">
+              <field name="punch_count" widget="statinfo" string="Punches"/>
+            </button>
+            <button name="action_open_unmatched_punches" type="object"
+                    class="oe_stat_button" icon="fa-question-circle"
+                    invisible="backend_type != 'device_portal'">
+              <field name="unmatched_punch_count" widget="statinfo" string="Unmatched"/>
+            </button>
+            <button name="action_open_days" type="object"
+                    class="oe_stat_button" icon="fa-calendar"
+                    invisible="backend_type != 'hrm'">
+              <field name="day_count" widget="statinfo" string="Days"/>
+            </button>
+            <button name="action_open_pending_photos" type="object"
+                    class="oe_stat_button" icon="fa-camera">
+              <field name="pending_photo_count" widget="statinfo" string="Photos queued"/>
+            </button>
+          </div>
+
           <div class="oe_title">
             <h1><field name="name" readonly="1"/></h1>
           </div>
@@ -43,6 +92,13 @@
               <field name="poll_overlap_minutes"/>
               <field name="source_timezone"
                      invisible="backend_type != 'device_portal'"/>
+              <field name="sync_employees"/>
+              <field name="sync_devices"/>
+              <field name="sync_attendance"/>
+              <field name="sync_photos"/>
+              <field name="sync_org_fields" invisible="backend_type != 'hrm'"/>
+              <field name="archive_departed" invisible="backend_type != 'hrm'"/>
+              <field name="auto_push_employees"/>
             </group>
             <group string="Reported by Tipsoi">
               <field name="remote_organization" readonly="1"/>
@@ -54,6 +110,19 @@
                      invisible="backend_type != 'hrm'"/>
               <field name="token_expiry" readonly="1"
                      invisible="backend_type != 'hrm'"/>
+            </group>
+          </group>
+
+          <group>
+            <group string="Windows and batches">
+              <field name="hrm_window_days" invisible="backend_type != 'hrm'"/>
+              <field name="punch_backfill_days"
+                     invisible="backend_type != 'device_portal'"/>
+              <field name="photo_batch_size"/>
+            </group>
+            <group string="Pairing" invisible="backend_type != 'device_portal'">
+              <field name="pair_duplicate_seconds"/>
+              <field name="max_shift_hours"/>
             </group>
           </group>
 

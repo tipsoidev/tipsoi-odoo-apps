@@ -248,10 +248,14 @@ class BaseAdapter:
         if status in (401, 403):
             raise TipsoiAuthError(message, status=status, payload=body)
 
-        # Photo failures carry a stable machine code. Two of the four are permanent and
-        # must be shown to a human instead of retried forever; the other two are
-        # transient and fall through to the retry path below.
-        if error_code in ("NO_FACE_DETECTED", "INVALID_IMAGE_SIZE"):
+        # A photo the pipeline will not accept, and it has to be recognised on either
+        # backend. The Device Portal names it -- NO_FACE_DETECTED / INVALID_IMAGE_SIZE,
+        # both 422. The Tipsoi app renders the same failures through its generic response
+        # shape, which carries a `message` and nothing else, so there the **status is the
+        # only signal**: 422 appears on the photo path alone, because its validation failures
+        # are 400. Classifying on the code alone let every Tipsoi-app photo rejection be
+        # retried forever against an image that can never pass.
+        if status == 422 or error_code in ("NO_FACE_DETECTED", "INVALID_IMAGE_SIZE"):
             raise TipsoiPhotoError(
                 message, status=status, error_code=error_code, payload=body)
 
@@ -456,7 +460,9 @@ class HrmAdapter(BaseAdapter):
     def extract_page(self, body):
         if not isinstance(body, dict):
             return (body or []), False
-        for key in ("attendance", "employees", "data", "content"):
+        # Every HRM response puts its rows at the top level under its own name -- there
+        # is no shared envelope key, and no `data` wrapper, to rely on.
+        for key in ("attendance", "employees", "devices", "data", "content"):
             if isinstance(body.get(key), list):
                 rows = body[key]
                 break
@@ -468,15 +474,18 @@ class HrmAdapter(BaseAdapter):
         return rows, has_more
 
     def describe_error(self, status, body, raw):
-        # Three shapes here alone: {"message": ..} from the @ControllerAdvice,
-        # {"message": .., "errorFieldNames": [..]} from bean validation, and Spring
-        # Boot's default {timestamp, status, error, path} when nothing handled it.
+        # Three shapes here alone: {"message": ..} from the API's shared error handler,
+        # {"message": .., "errorFieldNames": [..]} from field validation, and the
+        # framework default {timestamp, status, error, path} when nothing handled it.
         if isinstance(body, dict):
             message = body.get("message") or body.get("error") or redact(raw)
             fields = body.get("errorFieldNames")
             if fields:
                 message = "%s: %s" % (message, ", ".join(fields))
-            return message, None
+            # No error code exists on this side today -- the generic response shape
+            # carries exactly one field, `message`. Read one anyway if a future response
+            # grows it, rather than leave the classification on the status forever.
+            return message, body.get("errorCode") or body.get("error_code")
         return redact(raw), None
 
 

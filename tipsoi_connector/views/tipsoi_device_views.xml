@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_tipsoi_device_kanban" model="ir.ui.view">
+    <field name="name">tipsoi.device.kanban</field>
+    <field name="model">tipsoi.device</field>
+    <field name="arch" type="xml">
+      <kanban string="Readers" class="o_kanban_mobile" create="false" sample="1">
+        <field name="name"/>
+        <field name="identifier"/>
+        <field name="location"/>
+        <field name="device_type"/>
+        <field name="is_online"/>
+        <field name="connectivity_known"/>
+        <field name="last_communication_at"/>
+        <field name="total_allocated"/>
+        <field name="remote_status"/>
+        <templates>
+          <t t-name="kanban-box">
+            <div class="oe_kanban_global_click">
+              <div class="o_kanban_record_top mb-1">
+                <div class="o_kanban_record_headings">
+                  <strong class="o_kanban_record_title">
+                    <field name="name"/>
+                  </strong>
+                  <small class="o_kanban_record_subtitle text-muted">
+                    <field name="identifier"/>
+                  </small>
+                </div>
+                <div class="o_kanban_record_top_right">
+                  <span t-if="record.connectivity_known.raw_value and record.is_online.raw_value"
+                        class="badge text-bg-success"
+                        title="The reader held a live session at the last refresh.">
+                    <i class="fa fa-circle me-1" role="img"/>Online
+                  </span>
+                  <span t-if="record.connectivity_known.raw_value and !record.is_online.raw_value"
+                        class="badge text-bg-danger"
+                        title="The reader was reachable to ask about, and it is not connected.">
+                    <i class="fa fa-circle me-1" role="img"/>Offline
+                  </span>
+                  <span t-if="!record.connectivity_known.raw_value"
+                        class="badge text-bg-secondary"
+                        title="The last refresh could not learn the connection state. This is not the same as offline -- do not send anyone to check the reader on the strength of it.">
+                    <i class="fa fa-question-circle me-1" role="img"/>Unknown
+                  </span>
+                </div>
+              </div>
+              <div class="o_kanban_record_body">
+                <div t-if="record.location.raw_value">
+                  <i class="fa fa-map-marker me-1" role="img" title="Location"/>
+                  <field name="location"/>
+                </div>
+                <div t-if="record.device_type.raw_value">
+                  <i class="fa fa-exchange me-1" role="img" title="Reader type"/>
+                  <field name="device_type"/>
+                </div>
+                <div t-if="record.last_communication_at.raw_value">
+                  <i class="fa fa-clock-o me-1" role="img" title="Last heard from"/>
+                  <field name="last_communication_at"/>
+                </div>
+                <div t-if="record.total_allocated.raw_value">
+                  <i class="fa fa-users me-1" role="img" title="People allocated"/>
+                  <field name="total_allocated"/> allocated
+                </div>
+              </div>
+            </div>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_device_list" model="ir.ui.view">
+    <field name="name">tipsoi.device.list</field>
+    <field name="model">tipsoi.device</field>
+    <field name="arch" type="xml">
+      <list string="Devices" create="false"
+            decoration-danger="connectivity_known and not is_online"
+            decoration-muted="not connectivity_known">
+        <field name="name"/>
+        <field name="identifier"/>
+        <field name="location"/>
+        <field name="device_type"/>
+        <field name="workplace_name" optional="hide"/>
+        <field name="is_online"/>
+        <field name="connectivity_known" optional="show"/>
+        <field name="last_communication_at"/>
+        <field name="connected_at" optional="hide"/>
+        <field name="total_allocated" sum="Allocated" optional="show"/>
+        <field name="firmware_version" optional="hide"/>
+        <field name="is_mqtt_enabled" optional="hide"/>
+        <field name="phone_number" optional="hide"/>
+        <field name="tipsoi_id" optional="hide"/>
+        <field name="central_server_id" optional="hide"/>
+        <field name="remote_status" optional="hide"/>
+        <field name="last_sync" optional="hide"/>
+        <field name="backend_id" optional="show"/>
+        <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_device_form" model="ir.ui.view">
+    <field name="name">tipsoi.device.form</field>
+    <field name="model">tipsoi.device</field>
+    <field name="arch" type="xml">
+      <form string="Tipsoi Device" create="false">
+        <sheet>
+          <div class="oe_button_box" name="button_box">
+            <button name="action_open_punches" type="object" class="oe_stat_button"
+                    icon="fa-clock-o">
+              <span class="o_stat_text">Punches</span>
+            </button>
+          </div>
+          <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                  invisible="active"/>
+
+          <div class="oe_title">
+            <h1><field name="name" readonly="1"/></h1>
+          </div>
+
+          <div class="alert alert-secondary" role="alert" invisible="connectivity_known">
+            The last refresh could not learn this reader's connection state. That is not
+            the same as offline: the Device Portal reads connectivity from the MQTT
+            broker in a separate call that can fail on its own.
+          </div>
+
+          <group>
+            <group string="Identity">
+              <field name="identifier"/>
+              <field name="tipsoi_id" readonly="1"/>
+              <field name="central_server_id" readonly="1"
+                     invisible="not central_server_id"/>
+              <field name="description"/>
+              <field name="backend_id"/>
+              <field name="company_id" groups="base.group_multi_company"/>
+              <field name="active" widget="boolean_toggle"/>
+            </group>
+            <group string="Placement">
+              <field name="location"/>
+              <field name="device_type"/>
+              <field name="workplace_name" invisible="not workplace_name"/>
+              <field name="phone_number"/>
+              <field name="total_allocated" readonly="1"/>
+            </group>
+          </group>
+
+          <group>
+            <group string="Connectivity">
+              <field name="is_online" readonly="1"/>
+              <field name="connectivity_known" readonly="1"/>
+              <field name="connected_at" readonly="1"/>
+              <field name="last_communication_at" readonly="1"/>
+              <field name="is_mqtt_enabled"/>
+            </group>
+            <group string="Reported by Tipsoi">
+              <field name="firmware_version" readonly="1"/>
+              <field name="remote_status" readonly="1"/>
+              <field name="last_sync" readonly="1"/>
+            </group>
+          </group>
+
+          <notebook>
+            <page string="Raw payload" name="raw_payload">
+              <div class="text-muted mb-2">
+                The device row exactly as Tipsoi returned it. Both device payloads carry
+                fields this model does not keep, and support questions land on them.
+              </div>
+              <field name="raw_payload" readonly="1" nolabel="1"/>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_device_search" model="ir.ui.view">
+    <field name="name">tipsoi.device.search</field>
+    <field name="model">tipsoi.device</field>
+    <field name="arch" type="xml">
+      <search string="Devices">
+        <field name="name"/>
+        <field name="identifier"/>
+        <field name="location"/>
+        <field name="backend_id"/>
+        <filter name="online" string="Online"
+                domain="[('connectivity_known','=',True),('is_online','=',True)]"/>
+        <filter name="offline" string="Offline"
+                domain="[('connectivity_known','=',True),('is_online','=',False)]"/>
+        <filter name="connectivity_unknown" string="Connectivity unknown"
+                domain="[('connectivity_known','=',False)]"/>
+        <separator/>
+        <filter name="type_entry" string="Entry" domain="[('device_type','=','entry')]"/>
+        <filter name="type_exit" string="Exit" domain="[('device_type','=','exit')]"/>
+        <filter name="type_both" string="Entry &amp; exit"
+                domain="[('device_type','=','both')]"/>
+        <filter name="type_access" string="Access control"
+                domain="[('device_type','=','access')]"/>
+        <separator/>
+        <filter name="archived" string="Archived" domain="[('active','=',False)]"/>
+        <group expand="0" string="Group By">
+          <filter name="group_device_type" string="Reader type"
+                  context="{'group_by': 'device_type'}"/>
+          <filter name="group_remote_status" string="Remote status"
+                  context="{'group_by': 'remote_status'}"/>
+          <filter name="group_backend" string="Backend"
+                  context="{'group_by': 'backend_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_device" model="ir.actions.act_window">
+    <field name="name">Devices</field>
+    <field name="res_model">tipsoi.device</field>
+    <field name="view_mode">kanban,list,form</field>
+    <field name="search_view_id" ref="view_tipsoi_device_search"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">No readers yet</p>
+      <p>Readers arrive from Tipsoi. Open the backend and press Sync Devices.</p>
+      <p>A card can read Online, Offline or Unknown. Unknown means the last refresh could
+         not learn the connection state, which is a different thing from a reader that is
+         genuinely down -- the connectivity lookup is its own call and can fail by itself.</p>
+    </field>
+  </record>
+
+</odoo>
