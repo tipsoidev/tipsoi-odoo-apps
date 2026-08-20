@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_tipsoi_day_attendance_list" model="ir.ui.view">
+    <field name="name">tipsoi.day.attendance.list</field>
+    <field name="model">tipsoi.day.attendance</field>
+    <field name="arch" type="xml">
+      <list string="Daily Attendance" create="false"
+            decoration-danger="state == 'error'"
+            decoration-warning="state in ('unmatched', 'unpaired')"
+            decoration-muted="state == 'skipped'"
+            decoration-success="state == 'imported'">
+        <header>
+          <button name="action_import_now" type="object" string="Import now"
+                  class="btn-primary"/>
+          <button name="action_fetch_punch_detail" type="object" string="Fetch punches"/>
+          <button name="action_open_attendance" type="object" string="Attendance"/>
+        </header>
+        <field name="day_date"/>
+        <field name="employee_id"/>
+        <field name="employee_identifier"/>
+        <field name="check_in_utc"/>
+        <field name="check_out_utc"/>
+        <field name="total_hours" widget="float_time" sum="Hours"/>
+        <field name="overtime_minutes" sum="Overtime" optional="show"/>
+        <field name="att_status_text" optional="show"/>
+        <field name="is_present" optional="hide"/>
+        <field name="is_late" optional="show"/>
+        <field name="is_early" optional="hide"/>
+        <field name="is_inadequate" optional="hide"/>
+        <field name="is_leave" optional="hide"/>
+        <field name="is_holiday" optional="hide"/>
+        <field name="is_offday" optional="hide"/>
+        <field name="is_half_day" optional="hide"/>
+        <field name="entry_manual" optional="hide"/>
+        <field name="exit_manual" optional="hide"/>
+        <field name="leave_pending" optional="hide"/>
+        <field name="first_logged_raw" optional="hide"/>
+        <field name="last_logged_raw" optional="hide"/>
+        <field name="day_epoch" optional="hide"/>
+        <field name="total_hour_millis" optional="hide"/>
+        <field name="attendance_id" optional="hide"/>
+        <field name="state_reason" optional="hide"/>
+        <field name="backend_id" optional="hide"/>
+        <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+        <field name="state" widget="badge"
+               decoration-success="state == 'imported'"
+               decoration-warning="state in ('unmatched', 'unpaired')"
+               decoration-danger="state == 'error'"
+               decoration-muted="state == 'skipped'"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_day_attendance_form" model="ir.ui.view">
+    <field name="name">tipsoi.day.attendance.form</field>
+    <field name="model">tipsoi.day.attendance</field>
+    <field name="arch" type="xml">
+      <form string="Daily Attendance" create="false">
+        <header>
+          <button name="action_import_now" type="object" string="Import now"
+                  class="oe_highlight" icon="fa-download"
+                  invisible="state == 'imported'"/>
+          <button name="action_fetch_punch_detail" type="object" string="Fetch punches"
+                  icon="fa-search"
+                  title="Pulls the real punch detail for this one employee and day. It is
+                         a per-employee call, so it is a repair tool for a day that looks
+                         wrong rather than something that runs on a schedule."/>
+          <button name="action_open_attendance" type="object" string="Attendance"
+                  icon="fa-calendar-check-o" invisible="not attendance_id"/>
+          <field name="state" widget="statusbar" statusbar_visible="new,imported"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1><field name="name" readonly="1"/></h1>
+          </div>
+
+          <div class="alert alert-warning" role="alert" invisible="state != 'unmatched'">
+            The Tipsoi identifier on this day matches no Odoo employee, so there is nobody
+            to write attendance for. Set the identifier on the employee and import again.
+          </div>
+          <div class="alert alert-warning" role="alert" invisible="state != 'unpaired'">
+            This day has no usable check-in and check-out pair. Fetch punches to see what
+            the devices actually recorded.
+          </div>
+          <div class="alert alert-danger" role="alert"
+               invisible="state != 'error' or not state_reason">
+            <field name="state_reason" readonly="1" nolabel="1"/>
+          </div>
+
+          <group>
+            <group string="Who">
+              <field name="employee_id"/>
+              <field name="employee_identifier"/>
+              <field name="backend_id"/>
+              <field name="company_id" groups="base.group_multi_company"/>
+            </group>
+            <group string="Day">
+              <field name="day_date"/>
+              <field name="day_epoch" readonly="1"/>
+              <field name="att_status_text" readonly="1"/>
+              <field name="attendance_id" readonly="1"/>
+            </group>
+          </group>
+
+          <group>
+            <group string="Times">
+              <field name="check_in_utc" readonly="1"/>
+              <field name="check_out_utc" readonly="1"/>
+              <field name="first_logged_raw" readonly="1"/>
+              <field name="last_logged_raw" readonly="1"/>
+            </group>
+            <group string="Totals">
+              <field name="total_hours" widget="float_time" readonly="1"/>
+              <field name="total_hour_millis" readonly="1"/>
+              <field name="overtime_minutes" readonly="1"/>
+            </group>
+          </group>
+
+          <group string="Status flags">
+            <group>
+              <field name="is_present"/>
+              <field name="is_late"/>
+              <field name="is_early"/>
+              <field name="is_inadequate"/>
+              <field name="is_half_day"/>
+            </group>
+            <group>
+              <field name="is_leave"/>
+              <field name="is_holiday"/>
+              <field name="is_offday"/>
+              <field name="leave_pending"/>
+              <field name="entry_manual"/>
+              <field name="exit_manual"/>
+            </group>
+          </group>
+
+          <notebook>
+            <page string="Raw payload" name="raw_payload">
+              <div class="text-muted mb-2">
+                The day exactly as Tipsoi returned it.
+              </div>
+              <field name="raw_payload" readonly="1" nolabel="1"/>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_day_attendance_search" model="ir.ui.view">
+    <field name="name">tipsoi.day.attendance.search</field>
+    <field name="model">tipsoi.day.attendance</field>
+    <field name="arch" type="xml">
+      <search string="Daily Attendance">
+        <field name="employee_id"/>
+        <field name="employee_identifier"/>
+        <field name="day_date"/>
+        <field name="backend_id"/>
+        <filter name="state_new" string="Not imported" domain="[('state','=','new')]"/>
+        <filter name="state_imported" string="Imported"
+                domain="[('state','=','imported')]"/>
+        <filter name="state_skipped" string="Skipped" domain="[('state','=','skipped')]"/>
+        <filter name="state_unpaired" string="No usable times"
+                domain="[('state','=','unpaired')]"/>
+        <filter name="state_unmatched" string="No employee"
+                domain="[('state','=','unmatched')]"/>
+        <filter name="state_error" string="Errors" domain="[('state','=','error')]"/>
+        <separator/>
+        <filter name="late" string="Late" domain="[('is_late','=',True)]"/>
+        <filter name="on_leave" string="On leave" domain="[('is_leave','=',True)]"/>
+        <filter name="holiday" string="Holiday" domain="[('is_holiday','=',True)]"/>
+        <filter name="entry_manual" string="Manual entry"
+                domain="[('entry_manual','=',True)]"/>
+        <separator/>
+        <filter name="today" string="Today"
+                domain="[('day_date','&gt;=', context_today().strftime('%Y-%m-%d')),
+                         ('day_date','&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+        <group expand="0" string="Group By">
+          <filter name="group_state" string="State" context="{'group_by': 'state'}"/>
+          <filter name="group_employee" string="Employee"
+                  context="{'group_by': 'employee_id'}"/>
+          <filter name="group_day" string="Day" context="{'group_by': 'day_date:day'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_day_attendance" model="ir.actions.act_window">
+    <field name="name">Daily Attendance</field>
+    <field name="res_model">tipsoi.day.attendance</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="view_tipsoi_day_attendance_search"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">No days yet</p>
+      <p>Days come from the Tipsoi app, already summarised per employee per day. Open the
+         backend and press Sync Attendance, then Import Days.</p>
+      <p>A day that will not import keeps the reason on the row. Fetch punches pulls the
+         real punch detail for one employee and day, which is the repair tool for a day
+         whose times look wrong.</p>
+    </field>
+  </record>
+
+</odoo>

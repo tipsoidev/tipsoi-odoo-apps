@@ -47,8 +47,9 @@
     <div style="flex:1 1 240px;border:1px solid #e4dcec;border-top:3px solid #320073;border-radius:6px;padding:20px;">
       <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;">Attendance, kept current</h3>
       <p style="margin:0;font-size:14.5px;color:#40364f;">
-        Punches arrive on a schedule and become <code>hr.attendance</code> records. Late
-        arrivals, early exits and overtime come across with them.
+        Attendance arrives on a schedule and becomes <code>hr.attendance</code> records.
+        Overnight shifts, repeated reads and days with a punch missing are all handled
+        rather than quietly mangled.
       </p>
     </div>
     <div style="flex:1 1 240px;border:1px solid #e4dcec;border-top:3px solid #320073;border-radius:6px;padding:20px;">
@@ -62,7 +63,8 @@
       <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;">Devices and enrolment</h3>
       <p style="margin:0;font-size:14.5px;color:#40364f;">
         See your readers and their live connection state, allocate or revoke a person on a
-        device, and upload a profile photo for face recognition.
+        device, and upload a profile photo for face recognition &mdash; from the employee
+        record, without opening Tipsoi.
       </p>
     </div>
   </div>
@@ -116,7 +118,8 @@
         it asked for and counts of what was fetched, created, skipped and failed. When a
         number looks wrong, that is the first place to look.</p>
       <p style="margin:0;"><b>Nothing imports twice.</b> Records are keyed on the identifier
-        Tipsoi gives them, so re-running a window changes nothing.</p>
+        Tipsoi gives them, and a re-read updates the attendance record it already created
+        rather than adding a second one &mdash; so re-running a window changes nothing.</p>
     </div>
     <div style="flex:1 1 300px;">
       <p style="margin:0 0 12px;"><b>Failures are honest.</b> A photo with no detectable face
@@ -135,6 +138,9 @@
       with employee-module access; a read-only user cannot sync.</li>
     <li style="margin-bottom:8px;">Odoo 17.0 or 18.0, with <b>Employees</b> and
       <b>Attendances</b> installed.</li>
+    <li style="margin-bottom:8px;">To create an employee <i>in</i> the Tipsoi app from
+      Odoo, that employee needs a work email &mdash; Tipsoi requires one. Reading and
+      updating do not.</li>
   </ul>
 
   <div style="background:#f1eafa;border-radius:8px;padding:28px 32px;">

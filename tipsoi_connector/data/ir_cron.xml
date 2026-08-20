@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!--
+    These are safe to leave enabled from the moment the module is installed. Every entry
+    point selects backends through _ready_backends(), which returns only backends in the
+    "ready" state, a state a backend reaches by passing Test Connection and never merely
+    by being created. Each job then asserts the mode it was written for. So until
+    somebody has configured a backend and tested it, every one of these fires against an
+    empty recordset and does nothing.
+
+    noupdate="1" because a module upgrade must not undo a customer's own scheduling. A
+    site that widened the punch poll to fifteen minutes did so for a reason.
+
+    nextcall is offset per cron so that a fresh install does not run nine jobs in the
+    same second. Pairing is deliberately offset behind the punch poll, so it pairs
+    punches that have already landed rather than racing the poll fetching them.
+
+    No numbercall or doall here: Odoo 18 removed both fields, and naming a field that
+    does not exist is a hard install failure rather than a warning. Odoo 17 still has
+    them, and there numbercall defaults to 1, which would run each job exactly once and
+    then switch it off. So the 17.0 branch has to add numbercall=-1 back; see
+    docs/MIGRATION-17-18.md.
+  -->
+
+  <data noupdate="1">
+
+    <record id="cron_tipsoi_sync_devices" model="ir.cron">
+      <field name="name">Tipsoi: devices</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_sync_devices()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">15</field>
+      <field name="interval_type">minutes</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=2)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <record id="cron_tipsoi_sync_employees" model="ir.cron">
+      <field name="name">Tipsoi: employees (Device Portal)</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_sync_employees()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">1</field>
+      <field name="interval_type">hours</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=4)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <record id="cron_tipsoi_poll_punches" model="ir.cron">
+      <field name="name">Tipsoi: punch poll (Device Portal)</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_poll_punches()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">5</field>
+      <field name="interval_type">minutes</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=6)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <!-- Behind the punch poll on purpose: pairing sees punches that have landed. -->
+    <record id="cron_tipsoi_pair_punches" model="ir.cron">
+      <field name="name">Tipsoi: pairing (Device Portal)</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_pair_punches()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">5</field>
+      <field name="interval_type">minutes</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=8)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <record id="cron_tipsoi_sync_attendance" model="ir.cron">
+      <field name="name">Tipsoi: attendance &amp; masters (Tipsoi app)</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_sync_attendance()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">15</field>
+      <field name="interval_type">minutes</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <record id="cron_tipsoi_import_days" model="ir.cron">
+      <field name="name">Tipsoi: day import (Tipsoi app)</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_import_days()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">15</field>
+      <field name="interval_type">minutes</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=12)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <record id="cron_tipsoi_push_photos" model="ir.cron">
+      <field name="name">Tipsoi: photo backfill</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_push_photos()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">1</field>
+      <field name="interval_type">hours</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=14)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <record id="cron_tipsoi_push_employees" model="ir.cron">
+      <field name="name">Tipsoi: push employee changes</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_push_employees()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">1</field>
+      <field name="interval_type">hours</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=16)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <record id="cron_tipsoi_vacuum" model="ir.cron">
+      <field name="name">Tipsoi: vacuum staging</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_vacuum()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=18)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+  </data>
+</odoo>

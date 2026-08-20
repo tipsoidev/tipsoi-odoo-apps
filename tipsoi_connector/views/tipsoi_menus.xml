@@ -3,10 +3,31 @@
   <menuitem id="menu_tipsoi_root" name="Tipsoi"
             sequence="90" groups="tipsoi_connector.group_tipsoi_user"/>
 
+  <menuitem id="menu_tipsoi_attendance" name="Attendance"
+            parent="menu_tipsoi_root" sequence="10"/>
+  <menuitem id="menu_tipsoi_punch_log" name="Punch Logs"
+            parent="menu_tipsoi_attendance" action="action_tipsoi_punch_log" sequence="10"/>
+  <menuitem id="menu_tipsoi_unmatched_punch" name="Unmatched Punches"
+            parent="menu_tipsoi_attendance" action="action_tipsoi_unmatched_punch"
+            sequence="20"/>
+  <menuitem id="menu_tipsoi_day_attendance" name="Daily Attendance"
+            parent="menu_tipsoi_attendance" action="action_tipsoi_day_attendance"
+            sequence="30"/>
+
+  <menuitem id="menu_tipsoi_devices" name="Devices"
+            parent="menu_tipsoi_root" sequence="20"/>
+  <menuitem id="menu_tipsoi_device" name="Devices"
+            parent="menu_tipsoi_devices" action="action_tipsoi_device" sequence="10"/>
+  <menuitem id="menu_tipsoi_allocation" name="Allocate / Revoke"
+            parent="menu_tipsoi_devices" action="action_tipsoi_allocation" sequence="20"/>
+
   <menuitem id="menu_tipsoi_operations" name="Operations"
             parent="menu_tipsoi_root" sequence="30"/>
   <menuitem id="menu_tipsoi_sync_runs" name="Sync Runs"
             parent="menu_tipsoi_operations" action="action_tipsoi_sync_run" sequence="10"/>
+  <menuitem id="menu_tipsoi_manual_sync" name="Manual Sync"
+            parent="menu_tipsoi_operations" action="action_tipsoi_manual_sync"
+            sequence="20"/>
 
   <menuitem id="menu_tipsoi_config" name="Configuration"
             parent="menu_tipsoi_root" sequence="90"

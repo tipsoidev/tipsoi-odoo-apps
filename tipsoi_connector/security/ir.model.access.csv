@@ -3,3 +3,15 @@ access_tipsoi_backend_user,tipsoi.backend.user,model_tipsoi_backend,group_tipsoi
 access_tipsoi_backend_admin,tipsoi.backend.admin,model_tipsoi_backend,group_tipsoi_admin,1,1,1,1
 access_tipsoi_sync_run_user,tipsoi.sync.run.user,model_tipsoi_sync_run,group_tipsoi_user,1,0,0,0
 access_tipsoi_sync_run_admin,tipsoi.sync.run.admin,model_tipsoi_sync_run,group_tipsoi_admin,1,1,1,1
+access_tipsoi_device_user,tipsoi.device.user,model_tipsoi_device,group_tipsoi_user,1,0,0,0
+access_tipsoi_device_admin,tipsoi.device.admin,model_tipsoi_device,group_tipsoi_admin,1,1,1,1
+access_tipsoi_punch_log_user,tipsoi.punch.log.user,model_tipsoi_punch_log,group_tipsoi_user,1,1,0,0
+access_tipsoi_punch_log_admin,tipsoi.punch.log.admin,model_tipsoi_punch_log,group_tipsoi_admin,1,1,1,1
+access_tipsoi_day_attendance_user,tipsoi.day.attendance.user,model_tipsoi_day_attendance,group_tipsoi_user,1,0,0,0
+access_tipsoi_day_attendance_admin,tipsoi.day.attendance.admin,model_tipsoi_day_attendance,group_tipsoi_admin,1,1,1,1
+access_tipsoi_manual_sync_user,tipsoi.manual.sync.user,model_tipsoi_manual_sync,group_tipsoi_user,1,1,1,1
+access_tipsoi_manual_sync_admin,tipsoi.manual.sync.admin,model_tipsoi_manual_sync,group_tipsoi_admin,1,1,1,1
+access_tipsoi_link_employee_user,tipsoi.link.employee.user,model_tipsoi_link_employee,group_tipsoi_user,1,1,1,1
+access_tipsoi_link_employee_admin,tipsoi.link.employee.admin,model_tipsoi_link_employee,group_tipsoi_admin,1,1,1,1
+access_tipsoi_allocation_user,tipsoi.allocation.user,model_tipsoi_allocation,group_tipsoi_user,1,1,1,1
+access_tipsoi_allocation_admin,tipsoi.allocation.admin,model_tipsoi_allocation,group_tipsoi_admin,1,1,1,1
