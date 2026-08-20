@@ -171,7 +171,7 @@ class TestTipsoiTransport(TransactionCase):
                   "errorFieldNames": ["employeeIdentifier"]}, "")
         self.assertIn("employeeIdentifier", message)
 
-    def test_hrm_spring_default_500_shape_still_yields_a_message(self):
+    def test_hrm_unhandled_500_shape_still_yields_a_message(self):
         hrm = self._hrm_backend().client()
         message, _code = hrm.describe_error(
             500, {"timestamp": 1, "status": 500,
