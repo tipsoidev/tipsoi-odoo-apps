@@ -86,7 +86,7 @@
             </page>
             <page string="Sync runs" name="runs">
               <field name="sync_run_ids" readonly="1">
-                <list decoration-danger="state == 'error'"
+                <tree decoration-danger="state == 'error'"
                       decoration-warning="state == 'partial'">
                   <field name="started_at"/>
                   <field name="job"/>
@@ -100,7 +100,7 @@
                   <field name="state" widget="badge"
                          decoration-success="state == 'done'"
                          decoration-danger="state == 'error'"/>
-                </list>
+                </tree>
               </field>
             </page>
           </notebook>
@@ -113,7 +113,7 @@
     <field name="name">tipsoi.backend.list</field>
     <field name="model">tipsoi.backend</field>
     <field name="arch" type="xml">
-      <list string="Tipsoi Backends" decoration-danger="state == 'error'">
+      <tree string="Tipsoi Backends" decoration-danger="state == 'error'">
         <field name="name"/>
         <field name="backend_type"/>
         <field name="environment"/>
@@ -122,14 +122,14 @@
         <field name="state" widget="badge"
                decoration-success="state == 'ready'"
                decoration-danger="state == 'error'"/>
-      </list>
+      </tree>
     </field>
   </record>
 
   <record id="action_tipsoi_backend" model="ir.actions.act_window">
     <field name="name">Backends</field>
     <field name="res_model">tipsoi.backend</field>
-    <field name="view_mode">list,form</field>
+    <field name="view_mode">tree,form</field>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">Configure the Tipsoi connection</p>
       <p>One backend per client. Its type selects the whole pipeline, so choose the mode

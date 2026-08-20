@@ -19,7 +19,7 @@ place -- which is what stops the two systems disagreeing about who someone is.
 
 Learn more at https://tipsoi.ai/
 """,
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "category": "Human Resources/Attendances",
     "author": "Inovace Technologies",
     "website": "https://tipsoi.ai/",
