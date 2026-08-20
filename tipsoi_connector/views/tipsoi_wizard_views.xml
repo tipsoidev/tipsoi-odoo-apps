@@ -69,13 +69,13 @@
 
         <group string="Selected punches">
           <field name="punch_log_ids" readonly="1" nolabel="1">
-            <list create="false" delete="false" edit="false">
+            <tree create="false" delete="false" edit="false">
               <field name="punch_time_utc"/>
               <field name="person_identifier"/>
               <field name="device_id"/>
               <field name="direction"/>
               <field name="state"/>
-            </list>
+            </tree>
           </field>
         </group>
 

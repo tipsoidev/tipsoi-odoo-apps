@@ -33,6 +33,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">15</field>
       <field name="interval_type">minutes</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=2)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -46,6 +47,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">1</field>
       <field name="interval_type">hours</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=4)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -59,6 +61,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">5</field>
       <field name="interval_type">minutes</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=6)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -73,6 +76,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">5</field>
       <field name="interval_type">minutes</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=8)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -86,6 +90,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">15</field>
       <field name="interval_type">minutes</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -99,6 +104,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">15</field>
       <field name="interval_type">minutes</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=12)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -112,6 +118,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">1</field>
       <field name="interval_type">hours</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=14)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -125,6 +132,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">1</field>
       <field name="interval_type">hours</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=16)).strftime('%Y-%m-%d %H:%M:%S')"/>
@@ -138,6 +146,7 @@
       <field name="user_id" ref="base.user_root"/>
       <field name="interval_number">1</field>
       <field name="interval_type">days</field>
+      <field name="numbercall">-1</field>
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=18)).strftime('%Y-%m-%d %H:%M:%S')"/>
