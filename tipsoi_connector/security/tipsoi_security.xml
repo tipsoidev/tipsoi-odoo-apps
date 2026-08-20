@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+  <record id="module_category_tipsoi" model="ir.module.category">
+    <field name="name">Tipsoi</field>
+    <field name="description">Attendance and device integration with Tipsoi.</field>
+    <field name="sequence">20</field>
+  </record>
+
+  <record id="group_tipsoi_user" model="res.groups">
+    <field name="name">Tipsoi / User</field>
+    <field name="category_id" ref="module_category_tipsoi"/>
+    <field name="comment">Reads punch logs, devices and sync runs, and resolves
+      unmatched punches. Cannot see credentials or change the connection.</field>
+  </record>
+
+  <record id="group_tipsoi_admin" model="res.groups">
+    <field name="name">Tipsoi / Administrator</field>
+    <field name="category_id" ref="module_category_tipsoi"/>
+    <field name="implied_ids" eval="[(4, ref('group_tipsoi_user'))]"/>
+    <field name="comment">Configures the backend. This is the only group that can read
+      the stored credentials and tokens -- the secret fields are restricted to it at the
+      field level, not merely hidden in the view.</field>
+  </record>
+
+  <record id="base.default_user" model="res.users">
+    <field name="groups_id" eval="[(4, ref('group_tipsoi_admin'))]"/>
+  </record>
+
+  <!-- One backend per company, and never visible across companies. -->
+  <record id="rule_tipsoi_backend_company" model="ir.rule">
+    <field name="name">Tipsoi backend: own company only</field>
+    <field name="model_id" ref="model_tipsoi_backend"/>
+    <field name="domain_force">[('company_id','in',company_ids)]</field>
+  </record>
+
+  <record id="rule_tipsoi_sync_run_company" model="ir.rule">
+    <field name="name">Tipsoi sync run: own company only</field>
+    <field name="model_id" ref="model_tipsoi_sync_run"/>
+    <field name="domain_force">[('company_id','in',company_ids)]</field>
+  </record>
+
+</odoo>

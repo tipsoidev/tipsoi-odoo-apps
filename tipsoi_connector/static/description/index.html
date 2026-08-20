@@ -1,0 +1,131 @@
+<section style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#191324;line-height:1.6;">
+
+  <!-- header -->
+  <div style="background:#320073;color:#ffffff;padding:48px 40px;border-radius:8px;margin-bottom:40px;">
+    <p style="margin:0 0 14px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#c4a9f2;">
+      Tipsoi &middot; Attendance &amp; Access
+    </p>
+    <h1 style="margin:0 0 16px;font-size:40px;line-height:1.1;font-weight:600;color:#ffffff;">
+      Tipsoi Connector
+    </h1>
+    <p style="margin:0;font-size:19px;max-width:640px;color:#e6dbfa;">
+      Bring your Tipsoi people, devices and attendance into Odoo as native records.
+      Direct API integration — no middleware to run, nothing extra to keep alive.
+    </p>
+  </div>
+
+  <!-- what it does -->
+  <h2 style="font-size:26px;font-weight:600;margin:0 0 18px;color:#191324;">What it does</h2>
+  <p style="margin:0 0 28px;max-width:760px;">
+    Your biometric devices already record who came and went. This connector brings that
+    into Odoo automatically, so attendance, employees and devices live where the rest of
+    your HR data lives — and stop being a monthly spreadsheet export.
+  </p>
+
+  <div style="display:flex;flex-wrap:wrap;gap:20px;margin-bottom:44px;">
+    <div style="flex:1 1 240px;border:1px solid #e4dcec;border-top:3px solid #320073;border-radius:6px;padding:20px;">
+      <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;">Attendance, kept current</h3>
+      <p style="margin:0;font-size:14.5px;color:#40364f;">
+        Punches arrive on a schedule and become <code>hr.attendance</code> records. Late
+        arrivals, early exits and overtime come across with them.
+      </p>
+    </div>
+    <div style="flex:1 1 240px;border:1px solid #e4dcec;border-top:3px solid #320073;border-radius:6px;padding:20px;">
+      <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;">Employees in step</h3>
+      <p style="margin:0;font-size:14.5px;color:#40364f;">
+        People are matched on their Tipsoi identifier, so an employee is one employee in
+        both systems. Anyone who doesn't match is surfaced, never silently dropped.
+      </p>
+    </div>
+    <div style="flex:1 1 240px;border:1px solid #e4dcec;border-top:3px solid #320073;border-radius:6px;padding:20px;">
+      <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;">Devices and enrolment</h3>
+      <p style="margin:0;font-size:14.5px;color:#40364f;">
+        See your readers and their live connection state, allocate or revoke a person on a
+        device, and upload a profile photo for face recognition.
+      </p>
+    </div>
+  </div>
+
+  <!-- the design decision worth explaining -->
+  <h2 style="font-size:26px;font-weight:600;margin:0 0 18px;color:#191324;">One system of record</h2>
+  <p style="margin:0 0 20px;max-width:760px;">
+    Tipsoi comes in two shapes: some customers run the full Tipsoi app, others run the
+    Device Portal alone. You pick which one this connector talks to, and it talks to that
+    one only.
+  </p>
+  <p style="margin:0 0 20px;max-width:760px;">
+    That restraint is deliberate. If two systems both believe they own a person record,
+    employee IDs drift apart and attendance ends up attached to the wrong people. So the
+    connector refuses to be configured against both — and tells you if the mode you chose
+    doesn't match what your Tipsoi project actually has.
+  </p>
+
+  <table style="border-collapse:collapse;width:100%;max-width:760px;margin-bottom:44px;font-size:14.5px;">
+    <thead>
+      <tr style="background:#f1eafa;">
+        <th style="text-align:left;padding:11px 14px;border:1px solid #e4dcec;color:#320073;font-weight:600;">&nbsp;</th>
+        <th style="text-align:left;padding:11px 14px;border:1px solid #e4dcec;color:#320073;font-weight:600;">Device Portal</th>
+        <th style="text-align:left;padding:11px 14px;border:1px solid #e4dcec;color:#320073;font-weight:600;">Tipsoi app</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;"><b>Attendance from</b></td>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;">Individual punches, paired in Odoo</td>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;">Daily attendance with shift context</td>
+      </tr>
+      <tr>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;"><b>Employee details</b></td>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;">Name, ID and card — Odoo owns job and department</td>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;">Department, designation, shift and workplace included</td>
+      </tr>
+      <tr>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;"><b>Write back</b></td>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;">Create people, allocate, revoke, upload photos</td>
+        <td style="padding:11px 14px;border:1px solid #e4dcec;">Same, through the Tipsoi app</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- operational honesty -->
+  <h2 style="font-size:26px;font-weight:600;margin:0 0 18px;color:#191324;">Built to be debugged</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:20px;margin-bottom:44px;">
+    <div style="flex:1 1 300px;">
+      <p style="margin:0 0 12px;"><b>Every sync is logged.</b> One row per run with the window
+        it asked for and counts of what was fetched, created, skipped and failed. When a
+        number looks wrong, that is the first place to look.</p>
+      <p style="margin:0;"><b>Nothing imports twice.</b> Records are keyed on the identifier
+        Tipsoi gives them, so re-running a window changes nothing.</p>
+    </div>
+    <div style="flex:1 1 300px;">
+      <p style="margin:0 0 12px;"><b>Failures are honest.</b> A photo with no detectable face
+        is reported as exactly that, on the employee, instead of being retried forever. An
+        inactive Tipsoi account reads as inactive, not as a password problem.</p>
+      <p style="margin:0;"><b>Credentials stay put.</b> Tokens are held on the connection
+        record behind an administrator group and never written to a log.</p>
+    </div>
+  </div>
+
+  <!-- requirements -->
+  <h2 style="font-size:26px;font-weight:600;margin:0 0 18px;color:#191324;">Before you install</h2>
+  <ul style="margin:0 0 40px;padding-left:22px;max-width:760px;">
+    <li style="margin-bottom:8px;">An active Tipsoi account, and API credentials for it.</li>
+    <li style="margin-bottom:8px;">For the Tipsoi app, the API user needs administrator rights
+      with employee-module access; a read-only user cannot sync.</li>
+    <li style="margin-bottom:8px;">Odoo 17.0 or 18.0, with <b>Employees</b> and
+      <b>Attendances</b> installed.</li>
+  </ul>
+
+  <div style="background:#f1eafa;border-radius:8px;padding:28px 32px;">
+    <h3 style="margin:0 0 10px;font-size:19px;font-weight:600;color:#320073;">Getting started</h3>
+    <p style="margin:0 0 8px;">
+      Install the module, open <b>Tipsoi &rsaquo; Configuration &rsaquo; Backends</b>, choose
+      the mode that matches your Tipsoi setup, enter your credentials and press
+      <b>Test&nbsp;Connection</b>.
+    </p>
+    <p style="margin:0;color:#40364f;">
+      More about Tipsoi at <a href="https://tipsoi.ai/" style="color:#320073;">tipsoi.ai</a>.
+    </p>
+  </div>
+
+</section>

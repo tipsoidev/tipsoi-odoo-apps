@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_tipsoi_sync_run_list" model="ir.ui.view">
+    <field name="name">tipsoi.sync.run.list</field>
+    <field name="model">tipsoi.sync.run</field>
+    <field name="arch" type="xml">
+      <list string="Sync Runs" create="false"
+            decoration-danger="state == 'error'"
+            decoration-warning="state == 'partial'">
+        <field name="started_at"/>
+        <field name="backend_id"/>
+        <field name="job"/>
+        <field name="window_from" optional="show"/>
+        <field name="window_to" optional="show"/>
+        <field name="fetched" sum="Fetched"/>
+        <field name="created" sum="Created"/>
+        <field name="updated" sum="Updated" optional="hide"/>
+        <field name="skipped" sum="Skipped"/>
+        <field name="failed" sum="Failed"/>
+        <field name="duration_seconds" widget="float_time" string="Duration"/>
+        <field name="state" widget="badge"
+               decoration-success="state == 'done'"
+               decoration-danger="state == 'error'"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_sync_run_form" model="ir.ui.view">
+    <field name="name">tipsoi.sync.run.form</field>
+    <field name="model">tipsoi.sync.run</field>
+    <field name="arch" type="xml">
+      <form string="Sync Run" create="false" edit="false">
+        <sheet>
+          <group>
+            <group>
+              <field name="backend_id"/>
+              <field name="job"/>
+              <field name="state"/>
+            </group>
+            <group>
+              <field name="started_at"/>
+              <field name="finished_at"/>
+              <field name="duration_seconds" widget="float_time"/>
+            </group>
+          </group>
+          <group string="Window requested"
+                 help="The cursor advances to the window end that was requested, never
+                       to a value read back from the rows.">
+            <field name="window_from"/>
+            <field name="window_to"/>
+          </group>
+          <group string="Counts">
+            <field name="fetched"/><field name="created"/>
+            <field name="updated"/><field name="skipped"/><field name="failed"/>
+          </group>
+          <group string="Error" invisible="not error">
+            <field name="error" readonly="1" nolabel="1"/>
+          </group>
+          <group string="Notes" invisible="not notes">
+            <field name="notes" readonly="1" nolabel="1"/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_sync_run_search" model="ir.ui.view">
+    <field name="name">tipsoi.sync.run.search</field>
+    <field name="model">tipsoi.sync.run</field>
+    <field name="arch" type="xml">
+      <search string="Sync Runs">
+        <field name="backend_id"/>
+        <field name="job"/>
+        <filter name="failed" string="Failed" domain="[('state','=','error')]"/>
+        <filter name="partial" string="With errors" domain="[('failed','>',0)]"/>
+        <separator/>
+        <filter name="today" string="Today"
+                domain="[('started_at','&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
+        <group expand="0" string="Group By">
+          <filter name="group_job" string="Job" context="{'group_by': 'job'}"/>
+          <filter name="group_state" string="State" context="{'group_by': 'state'}"/>
+          <filter name="group_day" string="Day" context="{'group_by': 'started_at:day'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_sync_run" model="ir.actions.act_window">
+    <field name="name">Sync Runs</field>
+    <field name="res_model">tipsoi.sync.run</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{'search_default_group_job': 1}</field>
+  </record>
+
+</odoo>

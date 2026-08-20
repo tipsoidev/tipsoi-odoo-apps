@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <menuitem id="menu_tipsoi_root" name="Tipsoi"
+            sequence="90" groups="tipsoi_connector.group_tipsoi_user"/>
+
+  <menuitem id="menu_tipsoi_operations" name="Operations"
+            parent="menu_tipsoi_root" sequence="30"/>
+  <menuitem id="menu_tipsoi_sync_runs" name="Sync Runs"
+            parent="menu_tipsoi_operations" action="action_tipsoi_sync_run" sequence="10"/>
+
+  <menuitem id="menu_tipsoi_config" name="Configuration"
+            parent="menu_tipsoi_root" sequence="90"
+            groups="tipsoi_connector.group_tipsoi_admin"/>
+  <menuitem id="menu_tipsoi_backend" name="Backends"
+            parent="menu_tipsoi_config" action="action_tipsoi_backend" sequence="10"/>
+</odoo>
