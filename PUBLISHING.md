@@ -33,18 +33,13 @@ ssh://git@github.com/tipsoidev/tipsoi-odoo-apps.git
 
 ### Pushing from the HRM box
 
-Outbound tcp/22 is blocked from that machine, but GitHub's alternative SSH endpoint on
-443 is reachable. Add to `~/.ssh/config`:
+Works over plain SSH on port 22 — verified 2026-08-21 from `inovacehrm6`. The box's
+existing key (`~/.ssh/id_ed25519`, fingerprint `SHA256:K8Te/adZ/cMHHNLMBPWfUnuUg4BMoAFvOIEg6fp1Zrc`)
+is registered on the `tipsoidev` account, so `git push` needs no extra configuration.
 
-```
-Host github.com
-  Hostname ssh.github.com
-  Port 443
-  User git
-```
-
-Or push over HTTPS with a personal access token instead. This only affects pushing from
-that host — Odoo fetches from its own servers and is unaffected.
+If a different machine ever cannot reach port 22, GitHub's alternative endpoint on 443
+works: set `Hostname ssh.github.com` / `Port 443` for `Host github.com` in `~/.ssh/config`.
+That only affects pushing — Odoo fetches from its own servers and is unaffected.
 
 ## Registering with Odoo
 
