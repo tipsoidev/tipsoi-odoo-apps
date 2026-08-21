@@ -69,11 +69,27 @@ support@tipsoi.ai
 
 One branch per Odoo series, named to match:
 
+- `19.0` — Odoo 19.0
 - `18.0` — Odoo 18.0
 - `17.0` — Odoo 17.0
+- `16.0` — Odoo 16.0
+- `15.0` — Odoo 15.0
 
-The Python, security and test layers are identical across branches; only the list-view
-tag, the action `view_mode` and the manifest version differ.
+Development happens on `18.0`. Each other branch is a port with its delta measured and
+recorded, and each has a script that performs the mechanical part and verifies the rest:
+[MIGRATION-18-19.md](MIGRATION-18-19.md), [MIGRATION-17-18.md](MIGRATION-17-18.md),
+[MIGRATION-16-17.md](MIGRATION-16-17.md) and [MIGRATION-15-16.md](MIGRATION-15-16.md).
+
+The models, transport, security rules and tests are the same code on every branch, give or
+take what each series renamed. The view layer is where the series genuinely differ: 16 has
+only the older `attrs` domain form, 17 and 18 differ over the list-view tag, and 19 moved
+access groups onto its new privilege records. Every branch installs and passes the same 254
+tests on its own series.
+
+Note that 16.0 and 15.0 are outside Odoo's own support window — Odoo maintains the three
+most recent series, which with 19 released means 19, 18 and 17. Those two branches exist so
+an installation that has not upgraded can still connect Tipsoi; they are not a reason to
+stay there.
 
 ## Installing
 
