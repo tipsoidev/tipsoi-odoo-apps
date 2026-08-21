@@ -120,7 +120,7 @@ class TestDevicePortalEmployeeSync(TipsoiCase):
         })
 
         self._sync()
-        rahim.invalidate_recordset()
+        rahim.invalidate_cache()
         self.assertEqual(rahim.name, "Rahim U. (edited in Odoo)")
         self.assertEqual(rahim.department_id, department)
         self.assertEqual(rahim.job_id, job)
@@ -212,10 +212,10 @@ class TestHrmEmployeeSync(TipsoiCase):
         employee = self._upsert()
         self.assertTrue(employee.active)
         self._upsert(hrm_employee_row(status="On probation"))
-        employee.invalidate_recordset()
+        employee.invalidate_cache()
         self.assertTrue(employee.active)
         self._upsert(hrm_employee_row(status=""))
-        employee.invalidate_recordset()
+        employee.invalidate_cache()
         self.assertTrue(employee.active)
 
     def test_a_returning_employee_is_reactivated(self):
@@ -245,13 +245,13 @@ class TestHrmEmployeeSync(TipsoiCase):
             employeeIdentifier="E-020", employeeId=9020, employeeName="Manager"))
         self.assertEqual(
             self.env["hr.employee"]._link_hrm_managers(self.backend, manager_map), 1)
-        report.invalidate_recordset()
+        report.invalidate_cache()
         self.assertEqual(report.parent_id, manager)
 
     def test_an_employee_is_never_made_their_own_manager(self):
         employee = self._upsert(hrm_employee_row(employeeId=9030))
         self.env["hr.employee"]._link_hrm_managers(self.backend, {employee.id: 9030})
-        employee.invalidate_recordset()
+        employee.invalidate_cache()
         self.assertFalse(employee.parent_id)
 
     # -- the reason the match key is what it is --------------------------------------------

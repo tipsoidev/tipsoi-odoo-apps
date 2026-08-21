@@ -416,7 +416,7 @@ class TestHrmWriteBack(TipsoiCase):
         ], limit=1)
         self.assertTrue(attachment, "fields.Image should be attachment-backed")
         attachment.write({"datas": GIF_1X1})
-        self.employee.invalidate_recordset(["image_1920"])
+        self.employee.invalidate_cache(["image_1920"])
 
         # Stated as a precondition: if the bytes never arrive as a GIF then the guard is
         # unreachable through the ORM, and this test is worthless rather than passing.
@@ -555,7 +555,7 @@ class TestWriteBackQueueing(TipsoiCase):
         self.assertEqual(run.failed, 1, "the employee with no email")
         self.assertGreaterEqual(run.updated, 1)
         self.assertTrue(run.notes)
-        good.invalidate_recordset()
+        good.invalidate_cache()
         self.assertFalse(good.tipsoi_push_pending,
                          "a successful push must survive the loop's savepoint")
 

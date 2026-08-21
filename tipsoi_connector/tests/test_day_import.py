@@ -335,7 +335,7 @@ class TestHrmAttendanceSync(TipsoiCase):
             "is_present": True,
         })
         self._import()
-        row.invalidate_recordset()
+        row.invalidate_cache()
         self.assertEqual(row.state, "unmatched")
         self.assertIn("GHOST-9", row.state_reason)
 

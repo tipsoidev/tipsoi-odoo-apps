@@ -102,7 +102,7 @@ class TipsoiSyncRun(models.Model):
             "window_from": window_from,
             "window_to": window_to,
         })
-        run.flush_recordset()
+        run.flush()
         # Commit the run row on its own so a later rollback still leaves a record of what
         # was attempted -- that is the point of the audit.
         self.checkpoint()

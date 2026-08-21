@@ -316,11 +316,11 @@ class TipsoiDayAttendance(models.Model):
                     outcome = row._import_one()
             except ValidationError as exc:
                 # The cache still holds values from the rolled-back attempt.
-                self.env.invalidate_all(flush=False)
+                self.env.cache.invalidate()
                 row.write({"state": "error", "state_reason": str(exc)})
                 run.failed += 1
             except Exception as exc:        # noqa: BLE001 - recorded, not swallowed
-                self.env.invalidate_all(flush=False)
+                self.env.cache.invalidate()
                 row.write({"state": "error", "state_reason": str(exc)})
                 run.failed += 1
                 _logger.warning("Tipsoi day import failed for %s: %s", row.name, exc)

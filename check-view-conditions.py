@@ -99,7 +99,8 @@ probe = env["tipsoi.sync.run"].create({
         "backend_type": "device_portal", "base_url": "https://example.invalid/api/v1",
         "username": "u", "password": "p"}).id,
     "job": "devices", "notes": ""})
-probe.invalidate_recordset()
+# `invalidate_recordset` arrived in 16; 15 has only `invalidate_cache`.
+(getattr(probe, "invalidate_recordset", None) or probe.invalidate_cache)()
 print("EMPTY-STRING PROBE: notes stored as %r -- falsy=%s"
       % (probe.notes, not probe.notes))
 

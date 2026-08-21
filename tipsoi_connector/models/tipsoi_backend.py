@@ -574,7 +574,7 @@ class TipsoiBackend(models.Model):
             except Exception as exc:           # noqa: BLE001 - recorded, not swallowed
                 # The savepoint has already rolled back, so the ORM cache may still hold
                 # values for rows that no longer exist.
-                self.env.invalidate_all(flush=False)
+                self.env.cache.invalidate()
                 run.failed += 1
                 notes.append("%s: %s" % (employee.display_name, exc))
                 _logger.warning("Tipsoi push failed for %s: %s",
@@ -752,7 +752,7 @@ class TipsoiBackend(models.Model):
                 with self.env.cr.savepoint():
                     employee.sudo().action_tipsoi_upload_photo()
             except Exception as exc:           # noqa: BLE001 - recorded, not swallowed
-                self.env.invalidate_all(flush=False)
+                self.env.cache.invalidate()
                 run.failed += 1
                 _logger.warning("Tipsoi photo upload failed for %s: %s",
                                 employee.display_name, exc)
