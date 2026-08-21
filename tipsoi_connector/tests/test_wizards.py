@@ -420,7 +420,7 @@ class TestAllocationWizard(TipsoiCase):
         """
         return self.env["res.users"].create({
             "name": "Tipsoi viewer", "login": "tipsoi-viewer-alloc",
-            "groups_id": [(6, 0, [
+            self._groups_field(): [(6, 0, [
                 self.env.ref("base.group_user").id,
                 self.env.ref("hr.group_hr_manager").id,
                 self.env.ref("tipsoi_connector.group_tipsoi_user").id,

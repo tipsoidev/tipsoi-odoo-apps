@@ -117,14 +117,12 @@ class HrEmployee(models.Model):
         help="Set when a synced field changes and the backend is configured to push "
              "automatically. The push cron clears it.")
 
-    _sql_constraints = [
-        # NULLs are distinct in Postgres, so this constrains only the employees that
-        # actually carry an identifier -- which is exactly the intent.
-        ("uniq_tipsoi_identifier",
-         "unique(company_id, tipsoi_identifier)",
-         "Another employee in this company already uses that Tipsoi identifier. The "
-         "identifier is the link to Tipsoi, so it has to be unique."),
-    ]
+    # NULLs are distinct in Postgres, so this constrains only the employees that
+    # actually carry an identifier -- which is exactly the intent.
+    _uniq_tipsoi_identifier = models.Constraint(
+        "unique(company_id, tipsoi_identifier)",
+        "Another employee in this company already uses that Tipsoi identifier. The "
+        "identifier is the link to Tipsoi, so it has to be unique.")
 
     # ----------------------------------------------------------------------------------
     # queueing

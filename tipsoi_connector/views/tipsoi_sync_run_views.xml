@@ -77,7 +77,7 @@
         <separator/>
         <filter name="today" string="Today"
                 domain="[('started_at','&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
-        <group expand="0" string="Group By">
+        <group>
           <filter name="group_job" string="Job" context="{'group_by': 'job'}"/>
           <filter name="group_state" string="State" context="{'group_by': 'state'}"/>
           <filter name="group_day" string="Day" context="{'group_by': 'started_at:day'}"/>

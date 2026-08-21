@@ -185,12 +185,10 @@ class TipsoiBackend(models.Model):
     last_error = fields.Text(readonly=True, copy=False)
     sync_run_ids = fields.One2many("tipsoi.sync.run", "backend_id", readonly=True)
 
-    _sql_constraints = [
-        ("uniq_company_backend",
-         "unique(company_id)",
-         "One Tipsoi backend per company: the backend type selects the whole pipeline, "
-         "so a second one would mean mixing the two APIs."),
-    ]
+    _uniq_company_backend = models.Constraint(
+        "unique(company_id)",
+        "One Tipsoi backend per company: the backend type selects the whole pipeline, "
+        "so a second one would mean mixing the two APIs.")
 
     # ----------------------------------------------------------------------------------
     # display

@@ -125,17 +125,15 @@ class TipsoiDayAttendance(models.Model):
              "re-read update that record instead of adding a second one.")
     raw_payload = fields.Text(readonly=True)
 
-    _sql_constraints = [
-        # Keyed on the *date*, not the epoch the plan originally called for: an epoch in
-        # milliseconds is around 1.7e12, and Odoo's Integer is an int4 in Postgres, so
-        # storing it would overflow. The date is derived deterministically from the same
-        # key at the fixed +06:00 offset, so it is the identical key in a form that
-        # fits, and `day_epoch` keeps the original for checking.
-        ("uniq_backend_employee_day",
-         "unique(backend_id, employee_identifier, day_date)",
-         "This day is already staged for this employee. Re-reading a day updates the "
-         "existing row rather than adding another."),
-    ]
+    # Keyed on the *date*, not the epoch the plan originally called for: an epoch in
+    # milliseconds is around 1.7e12, and Odoo's Integer is an int4 in Postgres, so
+    # storing it would overflow. The date is derived deterministically from the same
+    # key at the fixed +06:00 offset, so it is the identical key in a form that
+    # fits, and `day_epoch` keeps the original for checking.
+    _uniq_backend_employee_day = models.Constraint(
+        "unique(backend_id, employee_identifier, day_date)",
+        "This day is already staged for this employee. Re-reading a day updates the "
+        "existing row rather than adding another.")
 
     @api.depends("employee_id", "employee_identifier", "day_date")
     def _compute_name(self):

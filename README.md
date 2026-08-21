@@ -69,11 +69,19 @@ support@tipsoi.ai
 
 One branch per Odoo series, named to match:
 
+- `19.0` — Odoo 19.0
 - `18.0` — Odoo 18.0
 - `17.0` — Odoo 17.0
 
-The Python, security and test layers are identical across branches; only the list-view
-tag, the action `view_mode` and the manifest version differ.
+Development happens on `18.0`. `17.0` is a backport and `19.0` a forward port, each with
+its delta measured and recorded — [MIGRATION-17-18.md](MIGRATION-17-18.md) and
+[MIGRATION-18-19.md](MIGRATION-18-19.md).
+
+Between `17.0` and `18.0` only the list-view tag, the action `view_mode`, one `ir.cron`
+field and the manifest version differ; the Python, security and test layers are identical.
+`19.0` additionally moves the access groups onto Odoo 19's new privilege records and
+restates the five uniqueness constraints in its new `models.Constraint` form — both of
+which 19 requires and neither of which it complains loudly about getting wrong.
 
 ## Installing
 
