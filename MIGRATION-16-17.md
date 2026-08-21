@@ -95,6 +95,12 @@ anything:
   silently skipped as unmodellable. The first run of the check did exactly that and reported
   16 of 30 conditions skipped.
 
+**One maintenance edge to know about.** The domain table exists twice — in
+`backport-to-16.sh`, which applies it, and inline in `check-view-conditions.py`, which
+proves it. Nothing checks that the two copies of that table agree, so editing a domain in
+one and not the other leaves the checker confirming the translation that is no longer there.
+Change both, in the same commit.
+
 ## What did *not* need changing
 
 - **`_sql_constraints`.** 16 supports it; only 19 dropped it. All five constraints confirmed
