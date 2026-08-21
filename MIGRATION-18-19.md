@@ -20,10 +20,13 @@ with an `odoo:18` control run of the untouched `18.0` tree in the same harness:
 | Views render (`get_views`) | ✅ 11 actions, 20 views, 0 failures | ✅ 11 actions, 20 views, 0 failures |
 | Menus / crons registered | ✅ 13 / 9 | ✅ 13 / 9 |
 | Unique constraints in Postgres | ✅ all 5 present | ✅ all 5 present |
+| A new user gets the Tipsoi admin group | ✅ | ✅ |
 
 `models/`, `wizards/` and the transport are otherwise byte-identical to `18.0`; the two
-test files differ only by a helper that asks the model which field name to use, so they can
-be adopted on `18.0`/`17.0` unchanged whenever that is convenient.
+test files differ only by a helper that asks the model which field name to use. That claim
+is measured, not assumed: the `18.0` tree with those two files taken from `19.0` and nothing
+else changed installs and passes **254 tests, 0 failed, 0 errors** on `odoo:18`, so they can
+be adopted there and on `17.0` unchanged whenever that is convenient.
 
 ## The two silent failures — read these first
 
@@ -108,6 +111,18 @@ means implying it from that group instead:
 <record id="base.default_user_group" model="res.groups">
   <field name="implied_ids" eval="[(4, ref('group_tipsoi_admin'))]"/>
 </record>
+```
+
+**Verified by creating a user, not by the install succeeding.** The suite cannot cover this:
+both of its user helpers pass explicit group lists precisely to avoid the default, so the one
+behaviour this change touches is the one behaviour no test exercises. It also needed checking
+because `base.default_user_group` lives inside a `<data noupdate="1">` block in 19's own
+`base_groups.xml`, which is exactly where a write from another module can silently not apply.
+It does apply — asked of a live instance on both series:
+
+```
+odoo:19   base.default_user_group implies ['Administrator']   new user has the group: True
+odoo:18   base.default_user template implies it               new user has the group: True
 ```
 
 ### 5. `res.users.groups_id` was renamed `group_ids`
