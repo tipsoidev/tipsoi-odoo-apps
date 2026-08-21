@@ -43,7 +43,7 @@ Links
 * Inovace Technologies, who build Tipsoi: https://inovacetech.com/
 * Support: support@tipsoi.ai
 """,
-    "version": "17.0.1.0.0",
+    "version": "16.0.1.0.0",
     "category": "Human Resources/Attendances",
     "author": "Inovace Technologies",
     "website": "https://tipsoi.ai/",

@@ -127,14 +127,13 @@ class TipsoiSyncRun(models.Model):
             })
             backend._record_job_success()
 
-    @api.depends("job", "started_at")
-    def _compute_display_name(self):
-        # `_compute_display_name`, not `name_get`: the latter was removed in Odoo 17, so
-        # a `name_get` override on either supported series is code that never runs.
+    def name_get(self):
+        # `name_get`, not `_compute_display_name`: Odoo 17 removed the former and added
+        # the latter, so on 16 a `_compute_display_name` override is code that never runs
+        # and every run shows as "tipsoi.sync.run,4" instead of the job and its time.
         labels = dict(self._fields["job"].selection)
-        for run in self:
-            run.display_name = "%s — %s" % (
-                labels.get(run.job, run.job), run.started_at or "")
+        return [(run.id, "%s — %s" % (labels.get(run.job, run.job), run.started_at or ""))
+                for run in self]
 
     def add_note(self, text):
         """Append a line to `notes` rather than replacing what is there.

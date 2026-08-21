@@ -113,13 +113,13 @@
             </button>
           </div>
           <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
-                  invisible="active"/>
+                  attrs="{'invisible': [('active', '=', True)]}"/>
 
           <div class="oe_title">
             <h1><field name="name" readonly="1"/></h1>
           </div>
 
-          <div class="alert alert-secondary" role="alert" invisible="connectivity_known">
+          <div class="alert alert-secondary" role="alert" attrs="{'invisible': [('connectivity_known', '=', True)]}">
             The last refresh could not learn this reader's connection state. That is not
             the same as offline: the Device Portal reads connectivity from the MQTT
             broker in a separate call that can fail on its own.
@@ -130,7 +130,7 @@
               <field name="identifier"/>
               <field name="tipsoi_id" readonly="1"/>
               <field name="central_server_id" readonly="1"
-                     invisible="not central_server_id"/>
+                     attrs="{'invisible': [('central_server_id', '=', 0)]}"/>
               <field name="description"/>
               <field name="backend_id"/>
               <field name="company_id" groups="base.group_multi_company"/>
@@ -139,7 +139,7 @@
             <group string="Placement">
               <field name="location"/>
               <field name="device_type"/>
-              <field name="workplace_name" invisible="not workplace_name"/>
+              <field name="workplace_name" attrs="{'invisible': [('workplace_name', 'in', [False, ''])]}"/>
               <field name="phone_number"/>
               <field name="total_allocated" readonly="1"/>
             </group>

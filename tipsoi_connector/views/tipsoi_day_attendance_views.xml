@@ -60,14 +60,14 @@
         <header>
           <button name="action_import_now" type="object" string="Import now"
                   class="oe_highlight" icon="fa-download"
-                  invisible="state == 'imported'"/>
+                  attrs="{'invisible': [('state', '=', 'imported')]}"/>
           <button name="action_fetch_punch_detail" type="object" string="Fetch punches"
                   icon="fa-search"
                   title="Pulls the real punch detail for this one employee and day. It is
                          a per-employee call, so it is a repair tool for a day that looks
                          wrong rather than something that runs on a schedule."/>
           <button name="action_open_attendance" type="object" string="Attendance"
-                  icon="fa-calendar-check-o" invisible="not attendance_id"/>
+                  icon="fa-calendar-check-o" attrs="{'invisible': [('attendance_id', '=', False)]}"/>
           <field name="state" widget="statusbar" statusbar_visible="new,imported"/>
         </header>
         <sheet>
@@ -75,16 +75,16 @@
             <h1><field name="name" readonly="1"/></h1>
           </div>
 
-          <div class="alert alert-warning" role="alert" invisible="state != 'unmatched'">
+          <div class="alert alert-warning" role="alert" attrs="{'invisible': [('state', '!=', 'unmatched')]}">
             The Tipsoi identifier on this day matches no Odoo employee, so there is nobody
             to write attendance for. Set the identifier on the employee and import again.
           </div>
-          <div class="alert alert-warning" role="alert" invisible="state != 'unpaired'">
+          <div class="alert alert-warning" role="alert" attrs="{'invisible': [('state', '!=', 'unpaired')]}">
             This day has no usable check-in and check-out pair. Fetch punches to see what
             the devices actually recorded.
           </div>
           <div class="alert alert-danger" role="alert"
-               invisible="state != 'error' or not state_reason">
+               attrs="{'invisible': ['|', ('state', '!=', 'error'), ('state_reason', 'in', [False, ''])]}">
             <field name="state_reason" readonly="1" nolabel="1"/>
           </div>
 

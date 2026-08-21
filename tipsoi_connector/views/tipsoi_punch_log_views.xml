@@ -50,9 +50,9 @@
         <header>
           <button name="action_pair_now" type="object" string="Pair now"
                   class="oe_highlight" icon="fa-link"
-                  invisible="state in ('paired', 'duplicate')"/>
+                  attrs="{'invisible': [('state', 'in', ['paired', 'duplicate'])]}"/>
           <button name="action_open_attendance" type="object" string="Attendance"
-                  icon="fa-calendar-check-o" invisible="not attendance_id"/>
+                  icon="fa-calendar-check-o" attrs="{'invisible': [('attendance_id', '=', False)]}"/>
           <field name="state" widget="statusbar"
                  statusbar_visible="new,matched,paired"/>
         </header>
@@ -61,12 +61,12 @@
             <h1><field name="name" readonly="1"/></h1>
           </div>
 
-          <div class="alert alert-warning" role="alert" invisible="state != 'unmatched'">
+          <div class="alert alert-warning" role="alert" attrs="{'invisible': [('state', '!=', 'unmatched')]}">
             This punch carries a Tipsoi identifier that matches no Odoo employee, so there
             is nobody to attribute it to. Use Link to Employee to resolve it permanently.
           </div>
           <div class="alert alert-danger" role="alert"
-               invisible="state != 'error' or not state_reason">
+               attrs="{'invisible': ['|', ('state', '!=', 'error'), ('state_reason', 'in', [False, ''])]}">
             <field name="state_reason" readonly="1" nolabel="1"/>
           </div>
 

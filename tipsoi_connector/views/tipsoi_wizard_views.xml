@@ -8,7 +8,7 @@
     <field name="model">tipsoi.manual.sync</field>
     <field name="arch" type="xml">
       <form string="Manual Sync">
-        <div class="alert alert-warning" role="alert" invisible="not mode_warning">
+        <div class="alert alert-warning" role="alert" attrs="{'invisible': [('mode_warning', 'in', [False, ''])]}">
           <field name="mode_warning" readonly="1" nolabel="1"/>
         </div>
 
@@ -17,18 +17,18 @@
             <field name="backend_id"/>
             <field name="job"/>
           </group>
-          <group invisible="job not in ('punches', 'attendance')">
+          <group attrs="{'invisible': [('job', 'not in', ['punches', 'attendance'])]}">
             <field name="date_from"/>
             <field name="date_to"/>
           </group>
         </group>
 
-        <div class="text-muted" invisible="job not in ('punches', 'attendance')">
+        <div class="text-muted" attrs="{'invisible': [('job', 'not in', ['punches', 'attendance'])]}">
           Leaving the window empty falls back to the backend's own cursor, which is what
           the scheduled run uses. Set it only to re-read a period on purpose.
         </div>
 
-        <group invisible="not result">
+        <group attrs="{'invisible': [('result', 'in', [False, ''])]}">
           <field name="result" readonly="1" nolabel="1"/>
         </group>
 
@@ -79,7 +79,7 @@
           </field>
         </group>
 
-        <group invisible="not result">
+        <group attrs="{'invisible': [('result', 'in', [False, ''])]}">
           <field name="result" readonly="1" nolabel="1"/>
         </group>
 
@@ -117,14 +117,14 @@
           <field name="device_ids" widget="many2many_tags"/>
         </group>
 
-        <group invisible="state != 'done'">
+        <group attrs="{'invisible': [('state', '!=', 'done')]}">
           <field name="result" readonly="1" nolabel="1"/>
         </group>
         <field name="state" invisible="1"/>
 
         <footer>
           <button name="action_apply" type="object" string="Apply" class="oe_highlight"
-                  invisible="state == 'done'"/>
+                  attrs="{'invisible': [('state', '=', 'done')]}"/>
           <button string="Close" class="btn-secondary" special="cancel"/>
         </footer>
       </form>

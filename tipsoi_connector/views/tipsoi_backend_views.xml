@@ -10,24 +10,24 @@
           <button name="action_test_connection" type="object" string="Test Connection"
                   class="oe_highlight" icon="fa-plug"/>
           <button name="action_sync_devices" type="object" string="Sync Devices"
-                  icon="fa-tablet" invisible="state != 'ready'"/>
+                  icon="fa-tablet" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
           <button name="action_sync_employees" type="object" string="Sync Employees"
                   icon="fa-users"
-                  invisible="state != 'ready' or backend_type != 'device_portal'"/>
+                  attrs="{'invisible': ['|', ('state', '!=', 'ready'), ('backend_type', '!=', 'device_portal')]}"/>
           <button name="action_poll_punches" type="object" string="Poll Punches"
                   icon="fa-clock-o"
-                  invisible="state != 'ready' or backend_type != 'device_portal'"/>
+                  attrs="{'invisible': ['|', ('state', '!=', 'ready'), ('backend_type', '!=', 'device_portal')]}"/>
           <button name="action_pair_punches" type="object" string="Pair Punches"
                   icon="fa-link"
-                  invisible="state != 'ready' or backend_type != 'device_portal'"/>
+                  attrs="{'invisible': ['|', ('state', '!=', 'ready'), ('backend_type', '!=', 'device_portal')]}"/>
           <button name="action_sync_attendance" type="object" string="Sync Attendance"
                   icon="fa-cloud-download"
-                  invisible="state != 'ready' or backend_type != 'hrm'"/>
+                  attrs="{'invisible': ['|', ('state', '!=', 'ready'), ('backend_type', '!=', 'hrm')]}"/>
           <button name="action_import_days" type="object" string="Import Days"
                   icon="fa-calendar"
-                  invisible="state != 'ready' or backend_type != 'hrm'"/>
+                  attrs="{'invisible': ['|', ('state', '!=', 'ready'), ('backend_type', '!=', 'hrm')]}"/>
           <button name="action_push_photos" type="object" string="Send Photos"
-                  icon="fa-camera" invisible="state != 'ready'"/>
+                  icon="fa-camera" attrs="{'invisible': [('state', '!=', 'ready')]}"/>
           <field name="state" widget="statusbar" statusbar_visible="draft,ready"/>
         </header>
         <sheet>
@@ -42,17 +42,17 @@
             </button>
             <button name="action_open_punches" type="object"
                     class="oe_stat_button" icon="fa-clock-o"
-                    invisible="backend_type != 'device_portal'">
+                    attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}">
               <field name="punch_count" widget="statinfo" string="Punches"/>
             </button>
             <button name="action_open_unmatched_punches" type="object"
                     class="oe_stat_button" icon="fa-question-circle"
-                    invisible="backend_type != 'device_portal'">
+                    attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}">
               <field name="unmatched_punch_count" widget="statinfo" string="Unmatched"/>
             </button>
             <button name="action_open_days" type="object"
                     class="oe_stat_button" icon="fa-calendar"
-                    invisible="backend_type != 'hrm'">
+                    attrs="{'invisible': [('backend_type', '!=', 'hrm')]}">
               <field name="day_count" widget="statinfo" string="Days"/>
             </button>
             <button name="action_open_pending_photos" type="object"
@@ -65,7 +65,7 @@
             <h1><field name="name" readonly="1"/></h1>
           </div>
 
-          <div class="alert alert-info" role="alert" invisible="backend_type">
+          <div class="alert alert-info" role="alert" attrs="{'invisible': [('backend_type', '!=', False)]}">
             Pick the mode that matches the client. A client on the Tipsoi app uses the
             HRM API for everything; a client on the Device Portal alone uses the device
             API for everything. They are never combined — that is what keeps person
@@ -91,43 +91,43 @@
               <field name="page_size"/>
               <field name="poll_overlap_minutes"/>
               <field name="source_timezone"
-                     invisible="backend_type != 'device_portal'"/>
+                     attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}"/>
               <field name="sync_employees"/>
               <field name="sync_devices"/>
               <field name="sync_attendance"/>
               <field name="sync_photos"/>
-              <field name="sync_org_fields" invisible="backend_type != 'hrm'"/>
-              <field name="archive_departed" invisible="backend_type != 'hrm'"/>
+              <field name="sync_org_fields" attrs="{'invisible': [('backend_type', '!=', 'hrm')]}"/>
+              <field name="archive_departed" attrs="{'invisible': [('backend_type', '!=', 'hrm')]}"/>
               <field name="auto_push_employees"/>
             </group>
             <group string="Reported by Tipsoi">
               <field name="remote_organization" readonly="1"/>
               <field name="remote_has_hrm" readonly="1"
-                     invisible="backend_type != 'device_portal'"/>
+                     attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}"/>
               <field name="tipsoi_office_id" readonly="1"
-                     invisible="backend_type != 'hrm'"/>
+                     attrs="{'invisible': [('backend_type', '!=', 'hrm')]}"/>
               <field name="tipsoi_user_id" readonly="1"
-                     invisible="backend_type != 'hrm'"/>
+                     attrs="{'invisible': [('backend_type', '!=', 'hrm')]}"/>
               <field name="token_expiry" readonly="1"
-                     invisible="backend_type != 'hrm'"/>
+                     attrs="{'invisible': [('backend_type', '!=', 'hrm')]}"/>
             </group>
           </group>
 
           <group>
             <group string="Windows and batches">
-              <field name="hrm_window_days" invisible="backend_type != 'hrm'"/>
+              <field name="hrm_window_days" attrs="{'invisible': [('backend_type', '!=', 'hrm')]}"/>
               <field name="punch_backfill_days"
-                     invisible="backend_type != 'device_portal'"/>
+                     attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}"/>
               <field name="photo_batch_size"/>
             </group>
-            <group string="Pairing" invisible="backend_type != 'device_portal'">
+            <group string="Pairing" attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}">
               <field name="pair_duplicate_seconds"/>
               <field name="max_shift_hours"/>
             </group>
           </group>
 
           <div class="alert alert-warning" role="alert"
-               invisible="backend_type != 'device_portal' or not source_timezone">
+               attrs="{'invisible': ['|', ('backend_type', '!=', 'device_portal'), ('source_timezone', 'in', [False, ''])]}">
             Device Portal timestamps are naive wall time in the application's timezone.
             The default is Asia/Dhaka but it is environment-overridable, so confirm it
             for this deployment rather than assuming. Note also that a small number of
@@ -139,18 +139,18 @@
               <group>
                 <group>
                   <field name="last_log_sync_time" readonly="1"
-                         invisible="backend_type != 'device_portal'"/>
+                         attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}"/>
                   <field name="last_attendance_sync" readonly="1"
-                         invisible="backend_type != 'hrm'"/>
+                         attrs="{'invisible': [('backend_type', '!=', 'hrm')]}"/>
                 </group>
                 <group>
                   <field name="last_employee_sync" readonly="1"/>
                   <field name="last_device_sync" readonly="1"
-                         invisible="backend_type != 'device_portal'"/>
+                         attrs="{'invisible': [('backend_type', '!=', 'device_portal')]}"/>
                 </group>
               </group>
             </page>
-            <page string="Last error" name="error" invisible="not last_error">
+            <page string="Last error" name="error" attrs="{'invisible': [('last_error', 'in', [False, ''])]}">
               <field name="last_error" readonly="1" widget="text"/>
             </page>
             <page string="Sync runs" name="runs">

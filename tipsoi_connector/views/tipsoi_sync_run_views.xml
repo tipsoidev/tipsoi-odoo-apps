@@ -54,10 +54,10 @@
             <field name="fetched"/><field name="created"/>
             <field name="updated"/><field name="skipped"/><field name="failed"/>
           </group>
-          <group string="Error" invisible="not error">
+          <group string="Error" attrs="{'invisible': [('error', 'in', [False, ''])]}">
             <field name="error" readonly="1" nolabel="1"/>
           </group>
-          <group string="Notes" invisible="not notes">
+          <group string="Notes" attrs="{'invisible': [('notes', 'in', [False, ''])]}">
             <field name="notes" readonly="1" nolabel="1"/>
           </group>
         </sheet>
