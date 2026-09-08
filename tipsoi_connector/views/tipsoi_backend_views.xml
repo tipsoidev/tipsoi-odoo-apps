@@ -20,6 +20,9 @@
           <button name="action_pair_punches" type="object" string="Pair Punches"
                   icon="fa-link"
                   invisible="state != 'ready' or backend_type != 'device_portal'"/>
+          <button name="action_build_days" type="object" string="Build Days"
+                  icon="fa-calendar"
+                  invisible="state != 'ready' or backend_type != 'device_portal'"/>
           <button name="action_sync_attendance" type="object" string="Sync Attendance"
                   icon="fa-cloud-download"
                   invisible="state != 'ready' or backend_type != 'hrm'"/>
@@ -51,8 +54,7 @@
               <field name="unmatched_punch_count" widget="statinfo" string="Unmatched"/>
             </button>
             <button name="action_open_days" type="object"
-                    class="oe_stat_button" icon="fa-calendar"
-                    invisible="backend_type != 'hrm'">
+                    class="oe_stat_button" icon="fa-calendar">
               <field name="day_count" widget="statinfo" string="Days"/>
             </button>
             <button name="action_open_pending_photos" type="object"
@@ -118,11 +120,14 @@
               <field name="hrm_window_days" invisible="backend_type != 'hrm'"/>
               <field name="punch_backfill_days"
                      invisible="backend_type != 'device_portal'"/>
+              <field name="day_window_days"
+                     invisible="backend_type != 'device_portal'"/>
               <field name="photo_batch_size"/>
             </group>
             <group string="Pairing" invisible="backend_type != 'device_portal'">
               <field name="pair_duplicate_seconds"/>
               <field name="max_shift_hours"/>
+              <field name="generate_absences"/>
             </group>
           </group>
 
@@ -132,6 +137,30 @@
             The default is Asia/Dhaka but it is environment-overridable, so confirm it
             for this deployment rather than assuming. Note also that a small number of
             devices are configured to return punch time already converted to GMT.
+          </div>
+
+          <div class="alert alert-warning" role="alert"
+               invisible="backend_type != 'device_portal' or generate_absences">
+            <strong>Absent days are not being marked.</strong>
+            Everything else in the day-wise view is evidence that a punch happened. An
+            absence is a claim made from the employee's working calendar — and the Device
+            Portal does not send one, so these employees inherit whatever the company
+            default is. Check that the working calendars match the real roster, then
+            switch on <em>Mark absent days</em> above. Lateness is judged from the same
+            calendars and waits for the same switch.
+            <div class="mt-2">
+              <button name="action_open_employee_calendars" type="object"
+                      class="btn btn-secondary btn-sm" icon="fa-calendar-o"
+                      string="Review working calendars"/>
+            </div>
+          </div>
+
+          <div class="alert alert-info" role="alert"
+               invisible="backend_type != 'device_portal' or not generate_absences">
+            Absent days are being marked. Remember that the Device Portal carries no
+            leave, holiday or roster feed, so an absence here means only that nobody
+            punched on a day the working calendar counts as working — approved leave and
+            an unexplained absence look exactly the same.
           </div>
 
           <notebook>

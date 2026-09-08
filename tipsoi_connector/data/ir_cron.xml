@@ -12,7 +12,7 @@
     noupdate="1" because a module upgrade must not undo a customer's own scheduling. A
     site that widened the punch poll to fifteen minutes did so for a reason.
 
-    nextcall is offset per cron so that a fresh install does not run nine jobs in the
+    nextcall is offset per cron so that a fresh install does not run ten jobs in the
     same second. Pairing is deliberately offset behind the punch poll, so it pairs
     punches that have already landed rather than racing the poll fetching them.
 
@@ -80,6 +80,28 @@
       <field name="active" eval="True"/>
       <field name="nextcall"
              eval="(DateTime.now() + timedelta(minutes=8)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+
+    <!--
+      Behind pairing, which it reads the output of. The two overlap by design: pairing
+      runs every five minutes and this every fifteen, so on a busy site a build can start
+      while a pairing pass is still committing. That costs this job a one-cycle-stale
+      view of hr.attendance and nothing else. The next build corrects it, because a
+      build is a full recompute of its window rather than an increment. It is not a race,
+      and it should not be debugged as one.
+    -->
+    <record id="cron_tipsoi_build_days" model="ir.cron">
+      <field name="name">Tipsoi: day build (Device Portal)</field>
+      <field name="model_id" ref="model_tipsoi_backend"/>
+      <field name="state">code</field>
+      <field name="code">model._cron_build_days()</field>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="interval_number">15</field>
+      <field name="interval_type">minutes</field>
+      <field name="numbercall">-1</field>
+      <field name="active" eval="True"/>
+      <field name="nextcall"
+             eval="(DateTime.now() + timedelta(minutes=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
     </record>
 
     <record id="cron_tipsoi_sync_attendance" model="ir.cron">
