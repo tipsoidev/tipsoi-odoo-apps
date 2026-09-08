@@ -26,7 +26,19 @@ JOB_MODES = {
     "pairing": "device_portal",
     "attendance": "hrm",
     "day_import": "hrm",
+    "days": "device_portal",
     "photos": None,
+}
+
+#: The job that does the equivalent work in the *other* mode, where there is one. Read
+#: only to make the mismatch warning useful: being told a job is wrong for your backend
+#: is half an answer, and the missing half -- which job to run instead -- is the reason
+#: "Daily Attendance is empty" became a support ticket rather than a two-minute fix.
+JOB_EQUIVALENT = {
+    "day_import": "days",
+    "days": "day_import",
+    "attendance": "punches",
+    "punches": "attendance",
 }
 
 #: The backend method each job calls when it runs over the backend's own window.
@@ -37,11 +49,15 @@ JOB_ACTIONS = {
     "pairing": "action_pair_punches",
     "attendance": "action_sync_attendance",
     "day_import": "action_import_days",
+    "days": "action_build_days",
     "photos": "action_push_photos",
 }
 
 #: The jobs that read a time window, and can therefore be aimed at a different one.
-WINDOWED_JOBS = ("punches", "attendance")
+#: The day build belongs here for the same reason a backfill does: its own window is a
+#: rolling few days, so without an explicit range there is no way to restate history --
+#: and restating history is exactly what a backfill is for.
+WINDOWED_JOBS = ("punches", "attendance", "days")
 
 
 class TipsoiManualSync(models.TransientModel):
@@ -67,14 +83,16 @@ class TipsoiManualSync(models.TransientModel):
          ("pairing", "Pairing"),
          ("attendance", "Attendance & masters"),
          ("day_import", "Day import"),
+         ("days", "Day build"),
          ("photos", "Photo backfill")],
         required=True, default="devices",
     )
 
     date_from = fields.Datetime(
         string="From",
-        help="Punch poll and attendance only. Leave both dates empty to use the "
-             "backend's own window.")
+        help="Punch poll, attendance and day build only. Leave both dates empty to use "
+             "the backend's own window. On the day build this is how history is "
+             "restated: the rolling window only reaches back a few days.")
     date_to = fields.Datetime(string="To")
 
     mode_warning = fields.Char(compute="_compute_mode_warning")
@@ -94,10 +112,16 @@ class TipsoiManualSync(models.TransientModel):
             if not wanted or not actual or wanted == actual:
                 wizard.mode_warning = False
                 continue
-            wizard.mode_warning = _(
+            message = _(
                 "This job is written for %(want)s backends, and this one is %(got)s. "
                 "The two APIs are never combined, so running it here would do nothing.",
                 want=labels.get(wanted, wanted), got=labels.get(actual, actual))
+            instead = JOB_EQUIVALENT.get(wizard.job)
+            if instead and JOB_MODES.get(instead) == actual:
+                job_labels = dict(wizard._fields["job"].selection)
+                message += _(" Run %s instead, which does the same work on this backend.",
+                             job_labels.get(instead, instead))
+            wizard.mode_warning = message
 
     # ----------------------------------------------------------------------------------
     # run
@@ -150,6 +174,12 @@ class TipsoiManualSync(models.TransientModel):
             backend._run(
                 "punches",
                 lambda b, run: self.env["tipsoi.punch.log"]._poll(b, run, start, end),
+                mode="device_portal", window_from=start, window_to=end)
+        elif self.job == "days":
+            backend._run(
+                "days",
+                lambda b, run: self.env["tipsoi.day.summary"]._build(
+                    b, run, start, end),
                 mode="device_portal", window_from=start, window_to=end)
         else:
             backend._run(

@@ -151,6 +151,23 @@ class TipsoiBackend(models.Model):
         default=7, string="First-run backfill (days)",
         help="How far back the very first punch poll reaches, before there is a cursor "
              "to continue from.")
+    day_window_days = fields.Integer(
+        default=7, string="Day rebuild window (days)",
+        help="Device Portal mode. How many days back the day-wise view is rebuilt each "
+             "run. Like the Tipsoi app's window and for the same reason: a punch that "
+             "arrives late restates a day that was already summarised, so there is "
+             "nothing to cursor on. Use Manual Sync with an explicit date range to "
+             "rebuild further back than this.")
+    generate_absences = fields.Boolean(
+        default=False, string="Mark absent days",
+        help="Device Portal mode, and off until somebody has checked the working "
+             "calendars. Every other row in the day-wise view is evidence -- a punch "
+             "happened. An absence is a claim made from the employee's working "
+             "calendar, and the Device Portal does not set one, so Odoo's company "
+             "default is what these employees inherit. Switch this on once those "
+             "calendars are right, and lateness is judged then too. Note that the "
+             "Device Portal has no leave, holiday or roster feed, so an absence here "
+             "means only 'no punch on a working day' -- approved leave looks the same.")
     photo_batch_size = fields.Integer(
         default=3, string="Photos per run",
         help="The enhancement pipeline upstream runs three at a time and allows up to "
@@ -224,7 +241,11 @@ class TipsoiBackend(models.Model):
                 [("backend_id", "=", backend.id)])
             backend.unmatched_punch_count = self.env["tipsoi.punch.log"].search_count(
                 [("backend_id", "=", backend.id), ("state", "=", "unmatched")])
-            backend.day_count = self.env["tipsoi.day.attendance"].search_count(
+            # One stat button, either pipeline. A Device Portal backend's days are
+            # derived here from its own punches; a Tipsoi app backend's are staged from
+            # what the app reported. Counting only the latter is what made a Device
+            # Portal customer's day view look permanently empty.
+            backend.day_count = self.env[backend._day_model()].search_count(
                 [("backend_id", "=", backend.id)])
             backend.employee_count = self.env["hr.employee"].with_context(
                 active_test=False).search_count([("tipsoi_backend_id", "=", backend.id)])
@@ -237,6 +258,20 @@ class TipsoiBackend(models.Model):
         """The timezone the Device Portal's naive timestamps are in."""
         self.ensure_one()
         return self.source_timezone or "Asia/Dhaka"
+
+    def _day_model(self):
+        """Which model holds this backend's day-wise attendance.
+
+        The two are not interchangeable and must never be merged: `tipsoi.day.attendance`
+        stages what the Tipsoi app reported and then *creates* `hr.attendance` from it,
+        while `tipsoi.day.summary` derives its rows *from* attendance that pairing has
+        already written. One reads where the other writes. This helper exists so that the
+        menu, the stat button and the counts can be mode-agnostic without anybody being
+        tempted to make the models so.
+        """
+        self.ensure_one()
+        return ("tipsoi.day.summary" if self.backend_type == "device_portal"
+                else "tipsoi.day.attendance")
 
     # ----------------------------------------------------------------------------------
     # validation
@@ -435,8 +470,42 @@ class TipsoiBackend(models.Model):
                           [("backend_id", "=", self.id), ("state", "=", "unmatched")])
 
     def action_open_days(self):
-        return self._open(_("Daily attendance"), "tipsoi.day.attendance",
+        return self._open(_("Daily attendance"), self._day_model(),
                           [("backend_id", "=", self.id)])
+
+    @api.model
+    def action_daily_attendance(self):
+        """The Daily Attendance menu, resolved to whichever pipeline this client has.
+
+        The two modes hold their day rows in different models for good reasons, but a
+        customer should not have to know that to find their own attendance. Before this,
+        the menu pointed unconditionally at the Tipsoi app's model, so a Device Portal
+        customer opened `Daily Attendance`, found it empty, and was told by the empty
+        state to press two buttons that their backend does not have. That is the whole
+        support ticket this method exists to prevent.
+        """
+        backend = self.search([], limit=1)
+        model = backend._day_model() if backend else "tipsoi.day.attendance"
+        xml_id = ("tipsoi_connector.action_tipsoi_day_summary"
+                  if model == "tipsoi.day.summary"
+                  else "tipsoi_connector.action_tipsoi_day_attendance")
+        # `_for_xml_id` rather than reading the record: it is the supported way to
+        # materialise an action, and its behaviour is the same across every series this
+        # module ships on.
+        return self.env["ir.actions.act_window"]._for_xml_id(xml_id)
+
+    def action_open_employee_calendars(self):
+        """This backend's employees, grouped by working calendar.
+
+        The fastest way to see the problem `generate_absences` guards against: a company
+        default sitting under every employee is one group with everybody in it, which is
+        a roster nobody chose.
+        """
+        return self._open(
+            _("Working calendars"), "hr.employee",
+            [("tipsoi_backend_id", "=", self.id)],
+            context={"search_default_group_by_calendar": 1,
+                     "group_by": "resource_calendar_id"})
 
     def action_open_pending_photos(self):
         return self._open(
@@ -661,6 +730,39 @@ class TipsoiBackend(models.Model):
                 "pairing",
                 lambda b, run: self.env["tipsoi.punch.log"]._pair(b, run),
                 mode="device_portal")
+        return True
+
+    @api.model
+    def _cron_build_days(self):
+        for backend in self._ready_backends("device_portal"):
+            if backend.sync_attendance:
+                backend.action_build_days()
+
+    def _day_window(self):
+        """A rolling rebuild, deliberately not a cursor.
+
+        Same reasoning as `_attendance_window`: a punch that arrives late -- a device
+        that was offline, a clock that drifted -- restates a day that has already been
+        summarised. There is no "changed since" to cursor on, so the last few days are
+        recomputed every time and upserted.
+        """
+        self.ensure_one()
+        now = fields.Datetime.now()
+        return now - timedelta(days=max(self.day_window_days, 1)), now
+
+    def action_build_days(self):
+        for backend in self:
+            if backend.backend_type != "device_portal":
+                raise UserError(_(
+                    "Building day rows from punches is Device Portal mode only. In "
+                    "Tipsoi app mode the app already reports each day, so use Sync "
+                    "Attendance and then Import Days."))
+            window_from, window_to = backend._day_window()
+            backend._run(
+                "days",
+                lambda b, run, f=window_from, t=window_to: (
+                    self.env["tipsoi.day.summary"]._build(b, run, f, t)),
+                mode="device_portal", window_from=window_from, window_to=window_to)
         return True
 
     # -- Tipsoi app attendance -----------------------------------------------------------

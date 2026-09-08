@@ -247,6 +247,39 @@ class TestJobsAssertTheirMode(TipsoiCase):
             backend.action_import_days()
         self.assertFalse(self.transport.calls)
 
+    def test_the_day_build_is_refused_in_tipsoi_app_mode(self):
+        """The app reports each day itself, so deriving days from punches there would be
+        a second, disagreeing answer to a question already answered."""
+        backend = self._backend("hrm")
+        with self.assertRaises(UserError) as caught:
+            backend.action_build_days()
+        self.assertIn("device portal", str(caught.exception).lower())
+        self.assertFalse(self.transport.calls)
+
+    def test_the_day_build_cron_skips_a_tipsoi_app_backend(self):
+        hrm = self._backend("hrm")
+        self.env["tipsoi.backend"]._cron_build_days()
+        self.assertFalse(self.env["tipsoi.day.summary"].search(
+            [("backend_id", "=", hrm.id)]))
+        self.assertEqual(hrm.state, "ready")
+
+    def test_each_mode_resolves_its_own_day_model(self):
+        """The menu, the stat button and the counts all route through this, which is what
+        lets one Daily Attendance entry serve both kinds of client without the two models
+        ever being merged."""
+        self.assertEqual(self._backend("device_portal")._day_model(),
+                         "tipsoi.day.summary")
+        self.assertEqual(self._backend("hrm")._day_model(),
+                         "tipsoi.day.attendance")
+
+    def test_the_day_menu_opens_the_model_the_backend_actually_fills(self):
+        """The bug this whole feature exists to close: a Device Portal client opened
+        Daily Attendance, was shown the Tipsoi app's model, and found it permanently
+        empty."""
+        self._backend("device_portal")
+        action = self.env["tipsoi.backend"].action_daily_attendance()
+        self.assertEqual(action["res_model"], "tipsoi.day.summary")
+
     def test_a_cron_skips_a_backend_in_the_wrong_mode_instead_of_failing(self):
         """A cron must not raise on a mode it does not apply to -- it selects by mode."""
         hrm = self._backend("hrm")

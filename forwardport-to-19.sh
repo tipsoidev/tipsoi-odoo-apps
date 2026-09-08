@@ -36,7 +36,7 @@ if grep -rn '_sql_constraints' $M/models >/dev/null; then
   note "_sql_constraints present -- 19 ignores it and drops the constraint. Convert each to
       _<name> = models.Constraint(definition, message)  (see MIGRATION-18-19.md §2)"
 fi
-want=5
+want=6
 have=$(grep -rc 'models.Constraint' $M/models/*.py | awk -F: '{s+=$2} END {print s+0}')
 [ "$have" = "$want" ] || note "$have models.Constraint found, expected $want"
 
@@ -54,15 +54,17 @@ if grep -rn '<tree \|>tree,form<' $M/views >/dev/null; then
   note "17-shaped arch found -- did this branch get merged from 17.0 rather than 18.0?"
 fi
 
-[ "$fail" = 0 ] && cat <<'MSG'
-forward-port clean: version 19.0.x, search groups converted, 5 models.Constraint,
+# Interpolated, not hardcoded: this message named a literal 5 while `want` was a variable,
+# so adding a constrained model made the script pass and still report the old number.
+[ "$fail" = 0 ] && cat <<MSG
+forward-port clean: version 19.0.x, search groups converted, $have models.Constraint,
 privilege + default_user_group wired.
 
 Not provable from here, and not optional -- on 19 a clean exit does NOT mean the module
 installed. After installing, confirm both:
 
   ir.module.module state == 'installed'      (a version mismatch exits 0 and installs nothing)
-  5 unique constraints on the tipsoi_* / hr_employee tables in pg_constraint
+  $have unique constraints on the tipsoi_* / hr_employee tables in pg_constraint
                                             (_sql_constraints is dropped with a warning only)
 MSG
 exit $fail

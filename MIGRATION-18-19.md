@@ -19,7 +19,7 @@ with an `odoo:18` control run of the untouched `18.0` tree in the same harness:
 | Module tests | ✅ **254 tests, 0 failed, 0 errors** | ✅ **254 tests, 0 failed, 0 errors** |
 | Views render (`get_views`) | ✅ 11 actions, 20 views, 0 failures | ✅ 11 actions, 20 views, 0 failures |
 | Menus / crons registered | ✅ 13 / 9 | ✅ 13 / 9 |
-| Unique constraints in Postgres | ✅ all 5 present | ✅ all 5 present |
+| Unique constraints in Postgres | ✅ all 6 present | ✅ all 6 present |
 | A new user gets the Tipsoi admin group | ✅ | ✅ |
 
 `models/`, `wizards/` and the transport are otherwise byte-identical to `18.0`; the two
@@ -56,13 +56,13 @@ WARNING odoo.registry: Model attribute '_sql_constraints' is no longer supported
         please define models.Constraint on the model.
 ```
 
-Five of those, one per constrained model — and the install still succeeds. The constraints
+Six of those, one per constrained model — and the install still succeeds. The constraints
 are simply never created, which on this module means: duplicate punches import instead of
 deduplicating, a day row can be staged twice for the same employee, two employees can share
 a Tipsoi identifier, and **a company can hold two backends at once**, which is precisely
 the mixing of the two APIs that `uniq_company_backend` exists to prevent.
 
-All five moved to the 19 form — a class attribute whose name becomes the constraint name:
+All six moved to the 19 form — a class attribute whose name becomes the constraint name:
 
 ```python
 _uniq_company_backend = models.Constraint(
@@ -78,6 +78,7 @@ tipsoi_backend_uniq_company_backend             UNIQUE (company_id)
 hr_employee_uniq_tipsoi_identifier              UNIQUE (company_id, tipsoi_identifier)
 tipsoi_punch_log_uniq_backend_log               UNIQUE (backend_id, tipsoi_log_id)
 tipsoi_day_attendance_uniq_backend_employee_day UNIQUE (backend_id, employee_identifier, day_date)
+tipsoi_day_summary_uniq_backend_employee_day    UNIQUE (backend_id, employee_id, day_date)
 tipsoi_device_uniq_backend_identifier           UNIQUE (backend_id, identifier)
 ```
 
@@ -209,7 +210,7 @@ Use `--test-tags=/tipsoi_connector`. Plain `--test-enable` runs the whole depend
 | Found | Version | Symptom | Fix |
 |---|---|---|---|
 | 2026-08-21 | 19 only | `incompatible version, setting installable=False` — **warning, exit 0, nothing installed** | manifest version → `19.0.x` |
-| 2026-08-21 | 19 only | `'_sql_constraints' is no longer supported` — **warning only; all 5 constraints silently dropped** | `models.Constraint` attributes |
+| 2026-08-21 | 19 only | `'_sql_constraints' is no longer supported` — **warning only; all 6 constraints silently dropped** | `models.Constraint` attributes |
 | 2026-08-21 | 19 only | `ValueError: Invalid field 'category_id' in 'res.groups'` | new `res.groups.privilege` record + `privilege_id` |
 | 2026-08-21 | 19 only | `Exception: Cannot update missing record 'base.default_user'` | imply the group from `base.default_user_group` |
 | 2026-08-21 | 19 only | `res.users.groups_id` renamed | `group_ids`; tests ask the model which name to use |
