@@ -129,6 +129,21 @@ class TestRollup(DaySummaryCase):
         self.assertAlmostEqual(day.worked_hours, 8.0, places=2)
         self.assertAlmostEqual(day.span_hours, 9.0, places=2)
 
+    def test_a_day_with_a_gap_is_flagged_as_having_a_break(self):
+        """Stored rather than computed in the view: the older series express a view
+        condition as a domain, and a domain cannot subtract one field from another."""
+        self._attendance(utc(MONDAY, 8), utc(MONDAY, 12))
+        self._attendance(utc(MONDAY, 13), utc(MONDAY, 17))
+        self._build()
+        self.assertTrue(self._day().has_break)
+
+    def test_a_single_unbroken_pair_has_no_break(self):
+        self._attendance(utc(MONDAY, 8), utc(MONDAY, 17))
+        self._build()
+        day = self._day()
+        self.assertFalse(day.has_break)
+        self.assertAlmostEqual(day.span_hours, day.worked_hours, places=2)
+
     def test_the_row_links_the_attendance_it_summarises(self):
         first = self._attendance(utc(MONDAY, 8), utc(MONDAY, 12))
         second = self._attendance(utc(MONDAY, 13), utc(MONDAY, 17))

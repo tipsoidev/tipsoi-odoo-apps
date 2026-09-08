@@ -25,6 +25,7 @@
         <field name="is_early" optional="hide"/>
         <field name="early_minutes" optional="hide" sum="Early (min)"/>
         <field name="is_short" optional="hide"/>
+        <field name="has_break" optional="hide"/>
         <field name="attendance_count" optional="hide"/>
         <field name="punch_count" optional="show"/>
         <field name="state_reason" optional="hide"/>
@@ -94,6 +95,7 @@
               <field name="is_early"/>
               <field name="early_minutes" invisible="not is_early"/>
               <field name="is_short"/>
+              <field name="has_break"/>
             </group>
             <group string="Sources">
               <field name="attendance_count"/>
@@ -101,8 +103,7 @@
             </group>
           </group>
 
-          <div class="alert alert-info" role="alert"
-               invisible="span_hours - worked_hours &lt; 0.02">
+          <div class="alert alert-info" role="alert" invisible="not has_break">
             On site exceeds Worked, so this day had a break between two separate pairs.
             Worked is the total the employee was on the clock.
           </div>

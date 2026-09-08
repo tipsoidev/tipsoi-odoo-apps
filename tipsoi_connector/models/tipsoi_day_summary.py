@@ -105,6 +105,12 @@ class TipsoiDaySummary(models.Model):
     late_minutes = fields.Integer(readonly=True, string="Late by (min)")
     is_early = fields.Boolean(readonly=True, string="Early exit")
     early_minutes = fields.Integer(readonly=True, string="Left early by (min)")
+    has_break = fields.Boolean(
+        readonly=True, string="Had a break",
+        help="On site exceeds worked, so the day had a gap between two pairs. Stored "
+             "rather than compared in the view: a view condition has to be expressible "
+             "as a domain on the older series, and a domain cannot subtract one field "
+             "from another.")
     is_short = fields.Boolean(
         readonly=True, string="Short hours",
         help="Worked less than the working calendar expected. Stored rather than worked "
@@ -402,6 +408,7 @@ class TipsoiDaySummary(models.Model):
                 "attendance_count": 0, "punch_count": 0,
                 "is_late": False, "late_minutes": 0,
                 "is_early": False, "early_minutes": 0, "is_short": False,
+                "has_break": False,
                 "state_reason": _(
                     "No punch on a day the working calendar says was a working day."),
             }
@@ -436,6 +443,9 @@ class TipsoiDaySummary(models.Model):
             and vals["day_type"] == "present"
             and expected > 0
             and vals["worked_hours"] + 0.005 < expected)
+        # Two pairs with a gap between them. The Tipsoi app's own day feed reports only
+        # first-in and last-out, so this is a distinction only the derived view can make.
+        vals["has_break"] = bool(vals["span_hours"] > vals["worked_hours"] + 0.02)
         return vals
 
     @api.model
@@ -510,7 +520,7 @@ class TipsoiDaySummary(models.Model):
     _COMPARED = ("day_type", "check_in_utc", "check_out_utc", "worked_hours",
                  "span_hours", "expected_hours", "attendance_count", "punch_count",
                  "is_late", "late_minutes", "is_early", "early_minutes", "is_short",
-                 "state_reason")
+                 "has_break", "state_reason")
 
     @api.model
     def _upsert(self, backend, employee, day, vals, row, counters):
