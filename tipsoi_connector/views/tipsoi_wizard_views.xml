@@ -17,7 +17,7 @@
             <field name="backend_id"/>
             <field name="job"/>
           </group>
-          <group attrs="{'invisible': [('job', 'not in', ['punches', 'attendance'])]}">
+          <group attrs="{'invisible': [('job', 'not in', ['punches', 'attendance', 'days'])]}">
             <field name="date_from"/>
             <field name="date_to"/>
           </group>
@@ -26,6 +26,14 @@
         <div class="text-muted" attrs="{'invisible': [('job', 'not in', ['punches', 'attendance'])]}">
           Leaving the window empty falls back to the backend's own cursor, which is what
           the scheduled run uses. Set it only to re-read a period on purpose.
+        </div>
+
+        <div class="text-muted" attrs="{'invisible': [('job', '!=', 'days')]}">
+          The day build rewrites the day-wise view for the range given, from attendance
+          that pairing has already written — so poll punches for the same range first, or
+          there is nothing to summarise. Leaving the window empty rebuilds the backend's
+          own rolling window, which is what the scheduled run does. Running it twice over
+          the same range changes nothing the second time.
         </div>
 
         <group attrs="{'invisible': [('result', 'in', [False, ''])]}">

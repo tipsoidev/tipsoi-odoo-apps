@@ -29,13 +29,13 @@ Verified 2026-08-21 by installing on the official `odoo:16` image against Postgr
 | Install | ✅ `installed`, exit 0 |
 | Module tests | ✅ **254 tests, 0 failed, 0 errors** |
 | Views render (`get_views`) | ✅ 11 actions, 20 views, 0 failures |
-| Menus / crons registered | ✅ 9 crons, all repeating |
+| Menus / crons registered | ✅ 10 crons, all repeating |
 | Unique constraints in Postgres | ✅ all 5 present |
 | Domain equivalence | ✅ **172 value combinations, 30 conditions, 0 mismatches** |
 
 ## The delta — 3 changes
 
-### 1. View conditions: plain Python → `attrs` domains (57 occurrences, 30 distinct)
+### 1. View conditions: plain Python → `attrs` domains (44 occurrences, 41 distinct)
 
 `invisible="state != 'done'"` → `attrs="{'invisible': [('state', '!=', 'done')]}"`. Field
 types decide the falsy spelling, so they were read off the models rather than guessed:
@@ -95,11 +95,19 @@ anything:
   silently skipped as unmodellable. The first run of the check did exactly that and reported
   16 of 30 conditions skipped.
 
-**One maintenance edge to know about.** The domain table exists twice — in
-`backport-to-16.sh`, which applies it, and inline in `check-view-conditions.py`, which
-proves it. Nothing checks that the two copies of that table agree, so editing a domain in
-one and not the other leaves the checker confirming the translation that is no longer there.
-Change both, in the same commit.
+**The table exists twice, and `check-domain-tables.py` now proves the two agree.** It is
+in `backport-to-16.sh`, which applies each translation, and inline in
+`check-view-conditions.py`, which proves it. Editing one and not the other used to leave the
+checker confirming a translation no longer in the tree — a green run against code that is
+not there. The new check compares the two copies, and also asserts the table covers exactly
+the conditions the views carry, with nothing missing and nothing stale. It needs no Odoo and
+no database, so run it before pushing:
+
+```bash
+python3 check-domain-tables.py
+```
+
+Still change both in the same commit; this just means you find out immediately if you don't.
 
 ## What did *not* need changing
 

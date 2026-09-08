@@ -10,8 +10,21 @@
   <menuitem id="menu_tipsoi_unmatched_punch" name="Unmatched Punches"
             parent="menu_tipsoi_attendance" action="action_tipsoi_unmatched_punch"
             sequence="20"/>
+  <!--
+    One menu entry, either pipeline. The two modes keep their day rows in separate
+    models on purpose: one stages what the Tipsoi app reported and writes attendance
+    from it, the other derives its rows from attendance pairing already wrote. But the
+    person looking for yesterday's hours should not have to know which they bought.
+  -->
+  <record id="action_tipsoi_daily_attendance" model="ir.actions.server">
+    <field name="name">Daily Attendance</field>
+    <field name="model_id" ref="model_tipsoi_backend"/>
+    <field name="state">code</field>
+    <field name="code">action = model.action_daily_attendance()</field>
+  </record>
+
   <menuitem id="menu_tipsoi_day_attendance" name="Daily Attendance"
-            parent="menu_tipsoi_attendance" action="action_tipsoi_day_attendance"
+            parent="menu_tipsoi_attendance" action="action_tipsoi_daily_attendance"
             sequence="30"/>
 
   <menuitem id="menu_tipsoi_devices" name="Devices"
