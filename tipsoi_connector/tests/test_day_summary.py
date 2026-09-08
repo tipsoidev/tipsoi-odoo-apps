@@ -260,13 +260,39 @@ class TestAbsencesAreOptIn(DaySummaryCase):
         self._build(SATURDAY, SATURDAY)
         self.assertFalse(self._day(SATURDAY))
 
-    def test_an_employee_with_no_calendar_is_never_absent(self):
-        """No schedule means no working day, and no working day means no claim."""
+    def test_an_employee_with_no_working_hours_is_never_absent(self):
+        """No schedule means no working day, and no working day means no claim.
+
+        The calendar is emptied rather than removed. Detaching it outright is not a state
+        every supported series can hold -- on 15 `resource.resource.calendar_id` is NOT
+        NULL, so writing False there is a database error rather than a test of anything --
+        and a calendar with no hours reaches the identical branch: `_calendar_of` returns
+        an empty slot list either way, and `_should_mark_absent` stops on `not slots`.
+        """
         self.backend.generate_absences = True
-        self.employee.resource_calendar_id = False
-        self.employee.company_id.resource_calendar_id = False
+        self.calendar.attendance_ids.unlink()
         self._build()
         self.assertFalse(self._day())
+
+    def test_no_slots_means_no_absence_whatever_produced_them(self):
+        """The guard itself, asserted directly rather than through a fixture.
+
+        This is the branch that the missing-calendar case would have exercised, and it is
+        reachable on every series because it takes the slot list as an argument.
+        """
+        self.backend.generate_absences = True
+        bounds = (MONDAY - timedelta(days=30), None)
+        Summary = self.env["tipsoi.day.summary"]
+        self.assertFalse(Summary._should_mark_absent(
+            self.backend, MONDAY, bounds, [], False))
+        self.assertTrue(
+            Summary._should_mark_absent(
+                self.backend, MONDAY, bounds,
+                self._slots_from(self.calendar), False),
+            "the control: a real calendar on a working day does justify an absence")
+
+    def _slots_from(self, calendar):
+        return self.env["tipsoi.day.summary"]._calendar_of(self.employee, self.backend)[0]
 
     def test_switching_absences_off_again_removes_the_rows_it_made(self):
         """They were a claim, and the claim has been withdrawn. Leaving them would be a
