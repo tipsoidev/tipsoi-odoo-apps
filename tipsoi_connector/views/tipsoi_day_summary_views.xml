@@ -46,7 +46,7 @@
       <form string="Daily Attendance" create="false" edit="false">
         <header>
           <button name="action_open_attendance" type="object" string="Attendance"
-                  icon="fa-calendar-check-o" invisible="not attendance_ids"/>
+                  icon="fa-calendar-check-o" invisible="attendance_count == 0"/>
           <button name="action_open_punches" type="object" string="Punches"
                   icon="fa-clock-o"
                   title="The raw punches behind this day. Where a number looks wrong,
