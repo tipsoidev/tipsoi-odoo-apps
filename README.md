@@ -24,6 +24,7 @@ assert that a backend in one mode issues zero requests to the other API.
 | | Device Portal | Tipsoi app |
 |---|---|---|
 | **Attendance** | Raw punches, paired in Odoo — overnight shifts, breaks, duplicate reads and odd punch counts all handled here | The day rows Tipsoi has already computed, with shift context, late/early flags and overtime |
+| **Day-wise view** | Built in Odoo from the paired attendance: worked hours against time on site, incomplete days, and — once you confirm the working calendars — absences, lateness and short hours | Read from Tipsoi as reported, including leave, holidays and off days, which the Device Portal has no feed for |
 | **Employees** | Name, identifier and card. **Odoo owns** job title, department and manager — Tipsoi holds no such fields for this topology | Department, designation, shift group, workplace and subsidiary all come from Tipsoi, with the sync ids write-back needs |
 | **Devices** | Reader list plus live MQTT connection state | Reader list with connection state included |
 | **Write back** | Create and update people, allocate, revoke, upload photos, soft-delete | The same, through the Tipsoi app, which propagates to the devices itself |
@@ -31,12 +32,17 @@ assert that a backend in one mode issues zero requests to the other API.
 
 ## What runs on a schedule
 
-Nine scheduled jobs ship enabled, and each one selects only backends that have tested
+Ten scheduled jobs ship enabled, and each one selects only backends that have tested
 successfully and asserts the mode it was written for — so nothing happens until a backend
-is configured. Devices every 15 minutes; punches and pairing every 5; the Tipsoi app's
+is configured. Devices every 15 minutes; punches and pairing every 5; the Device Portal's
+day build every 15, behind pairing, which it reads the output of; the Tipsoi app's
 attendance window and day import every 15; employees, photo uploads and queued write-backs
 hourly; and a nightly vacuum that drops staging rows and audit rows once they have
 outlived their usefulness.
+
+There is no manual step anywhere in the path from a device to a day row in Odoo. The
+buttons exist to run a job early or to aim one at an older window; leaving them alone is
+the supported way to run this.
 
 Every run is one row in **Sync Runs** with the window it asked for and counts of what was
 fetched, created, updated, skipped and failed. It is the first place to look when a number
@@ -83,8 +89,8 @@ recorded, and each has a script that performs the mechanical part and verifies t
 The models, transport, security rules and tests are the same code on every branch, give or
 take what each series renamed. The view layer is where the series genuinely differ: 16 has
 only the older `attrs` domain form, 17 and 18 differ over the list-view tag, and 19 moved
-access groups onto its new privilege records. Every branch installs and passes the same 254
-tests on its own series.
+access groups onto its new privilege records. Every branch installs and runs the same 328
+tests on its own series; run them with `--test-enable` against the series you deploy.
 
 Note that 16.0 and 15.0 are outside Odoo's own support window — Odoo maintains the three
 most recent series, which with 19 released means 19, 18 and 17. Those two branches exist so

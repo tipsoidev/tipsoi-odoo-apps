@@ -30,11 +30,17 @@ One system of record
 
 One backend record per client, and its type selects the whole pipeline:
 
-* Device Portal only -- raw punches from the device API, paired in Odoo.
-* Tipsoi app (HRM) -- employees, org masters and attendance from the HRM API.
+* Device Portal only -- raw punches from the device API, paired in Odoo into attendance
+  and rolled up into a day-wise view per employee per day.
+* Tipsoi app (HRM) -- employees, org masters and attendance from the HRM API, where the
+  day rows arrive already computed.
 
 The two never mix, so person records and employee identifiers are managed in exactly one
-place. That is what stops the two systems disagreeing about who someone is.
+place. That is what stops the two systems disagreeing about who someone is. Both modes
+fill the same Daily Attendance screen, so which one a client runs is a configuration
+detail rather than something they have to know to find their own hours.
+
+Everything runs on a schedule. Device to Tipsoi to Odoo needs no button pressed.
 
 Links
 -----
@@ -62,6 +68,7 @@ Links
         "views/tipsoi_device_views.xml",
         "views/tipsoi_punch_log_views.xml",
         "views/tipsoi_day_attendance_views.xml",
+        "views/tipsoi_day_summary_views.xml",
         "views/hr_employee_views.xml",
         "views/tipsoi_sync_run_views.xml",
         "views/tipsoi_backend_views.xml",

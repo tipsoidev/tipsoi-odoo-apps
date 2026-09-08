@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_tipsoi_day_summary_list" model="ir.ui.view">
+    <field name="name">tipsoi.day.summary.list</field>
+    <field name="model">tipsoi.day.summary</field>
+    <field name="arch" type="xml">
+      <list string="Daily Attendance" create="false" edit="false"
+            decoration-danger="day_type == 'absent'"
+            decoration-warning="day_type == 'partial'">
+        <header>
+          <button name="action_open_attendance" type="object" string="Attendance"/>
+          <button name="action_open_punches" type="object" string="Punches"/>
+        </header>
+        <field name="day_date"/>
+        <field name="employee_id"/>
+        <field name="employee_identifier" optional="hide"/>
+        <field name="check_in_utc"/>
+        <field name="check_out_utc"/>
+        <field name="worked_hours" widget="float_time" sum="Worked"/>
+        <field name="span_hours" widget="float_time" sum="On site" optional="hide"/>
+        <field name="expected_hours" widget="float_time" sum="Expected" optional="hide"/>
+        <field name="is_late" optional="show"/>
+        <field name="late_minutes" optional="hide" sum="Late (min)"/>
+        <field name="is_early" optional="hide"/>
+        <field name="early_minutes" optional="hide" sum="Early (min)"/>
+        <field name="is_short" optional="hide"/>
+        <field name="attendance_count" optional="hide"/>
+        <field name="punch_count" optional="show"/>
+        <field name="state_reason" optional="hide"/>
+        <field name="backend_id" optional="hide"/>
+        <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+        <field name="day_type" widget="badge"
+               decoration-success="day_type == 'present'"
+               decoration-warning="day_type == 'partial'"
+               decoration-danger="day_type == 'absent'"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_day_summary_form" model="ir.ui.view">
+    <field name="name">tipsoi.day.summary.form</field>
+    <field name="model">tipsoi.day.summary</field>
+    <field name="arch" type="xml">
+      <form string="Daily Attendance" create="false" edit="false">
+        <header>
+          <button name="action_open_attendance" type="object" string="Attendance"
+                  icon="fa-calendar-check-o" invisible="not attendance_ids"/>
+          <button name="action_open_punches" type="object" string="Punches"
+                  icon="fa-clock-o"
+                  title="The raw punches behind this day. Where a number looks wrong,
+                         this is what the devices actually recorded."/>
+          <field name="day_type" widget="statusbar"
+                 statusbar_visible="present,partial,absent"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1><field name="name" readonly="1"/></h1>
+          </div>
+
+          <div class="alert alert-warning" role="alert"
+               invisible="day_type != 'partial'">
+            This day has punches but no completed entry-and-exit pair. Most often that is
+            an entry still waiting for its exit, and it pairs itself as soon as one
+            arrives — nothing needs doing. If it stays this way, open the punches.
+          </div>
+          <div class="alert alert-danger" role="alert" invisible="day_type != 'absent'">
+            No punch on a day the working calendar counts as working. The Device Portal
+            has no leave, holiday or roster feed, so approved leave looks exactly like an
+            unexplained absence here.
+          </div>
+
+          <group>
+            <group string="Times">
+              <field name="day_date"/>
+              <field name="check_in_utc"/>
+              <field name="check_out_utc"/>
+              <field name="worked_hours" widget="float_time"/>
+              <field name="span_hours" widget="float_time"/>
+              <field name="expected_hours" widget="float_time"/>
+            </group>
+            <group string="Employee">
+              <field name="employee_id"/>
+              <field name="employee_identifier"/>
+              <field name="backend_id"/>
+              <field name="company_id" groups="base.group_multi_company"/>
+            </group>
+          </group>
+
+          <group>
+            <group string="Punctuality">
+              <field name="is_late"/>
+              <field name="late_minutes" invisible="not is_late"/>
+              <field name="is_early"/>
+              <field name="early_minutes" invisible="not is_early"/>
+              <field name="is_short"/>
+            </group>
+            <group string="Sources">
+              <field name="attendance_count"/>
+              <field name="punch_count"/>
+            </group>
+          </group>
+
+          <div class="alert alert-info" role="alert"
+               invisible="span_hours - worked_hours &lt; 0.02">
+            On site exceeds Worked, so this day had a break between two separate pairs.
+            Worked is the total the employee was on the clock.
+          </div>
+
+          <notebook>
+            <page string="Attendance" name="attendance">
+              <div class="text-muted mb-2">
+                Written by pairing from the raw punches. This day-wise row is derived from
+                them and never edits them, so correcting a time means correcting the
+                attendance record and letting the next build restate the day.
+              </div>
+              <field name="attendance_ids" readonly="1" nolabel="1"/>
+            </page>
+            <page string="Why" name="reason" invisible="not state_reason">
+              <field name="state_reason" readonly="1" nolabel="1"/>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_tipsoi_day_summary_search" model="ir.ui.view">
+    <field name="name">tipsoi.day.summary.search</field>
+    <field name="model">tipsoi.day.summary</field>
+    <field name="arch" type="xml">
+      <search string="Daily Attendance">
+        <field name="employee_id"/>
+        <field name="employee_identifier"/>
+        <field name="day_date"/>
+        <field name="backend_id"/>
+        <filter name="present" string="Present"
+                domain="[('day_type','=','present')]"/>
+        <filter name="partial" string="Incomplete"
+                domain="[('day_type','=','partial')]"/>
+        <filter name="absent" string="Absent" domain="[('day_type','=','absent')]"/>
+        <separator/>
+        <filter name="late" string="Late" domain="[('is_late','=',True)]"/>
+        <filter name="early" string="Early exit" domain="[('is_early','=',True)]"/>
+        <filter name="short" string="Short hours" domain="[('is_short','=',True)]"/>
+        <separator/>
+        <filter name="today" string="Today"
+                domain="[('day_date','&gt;=', context_today().strftime('%Y-%m-%d')),
+                         ('day_date','&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+        <filter name="this_month" string="This month"
+                domain="[('day_date','&gt;=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d'))]"/>
+        <group expand="0" string="Group By">
+          <filter name="group_day_type" string="Status"
+                  context="{'group_by': 'day_type'}"/>
+          <filter name="group_employee" string="Employee"
+                  context="{'group_by': 'employee_id'}"/>
+          <filter name="group_day" string="Day" context="{'group_by': 'day_date:day'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_tipsoi_day_summary" model="ir.actions.act_window">
+    <field name="name">Daily Attendance</field>
+    <field name="res_model">tipsoi.day.summary</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="view_tipsoi_day_summary_search"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">No days yet</p>
+      <p>On a Device Portal backend these days are built here in Odoo, from the punches
+         the devices sent: the punch poll fetches them, pairing turns them into
+         attendance, and the day build rolls that up per employee per day. All three run
+         on a schedule, so a new punch reaches this screen on its own within about
+         fifteen minutes.</p>
+      <p>Nothing here yet usually means the punch poll has not reached back far enough.
+         Open the backend, raise <em>First-run backfill (days)</em>, and use Manual Sync
+         to poll punches and then build days over the range you want.</p>
+    </field>
+  </record>
+
+</odoo>

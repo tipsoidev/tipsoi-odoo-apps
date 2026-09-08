@@ -13,7 +13,7 @@ and `odoo:17` images against PostgreSQL 16):
 | Install | ✅ `installed`, exit 0 | ✅ `installed`, exit 0 |
 | Module tests | ✅ **201 tests, 0 failed, 0 errors** | ✅ **201 tests, 0 failed, 0 errors** |
 | Views render (`get_views`) | ✅ all 11 actions + 2 inherited | ✅ all 11 actions + 2 inherited |
-| Menus / crons registered | ✅ 11 / 9 | ✅ 11 / 9 |
+| Menus / crons registered | ✅ 11 / 10 | ✅ 11 / 10 |
 
 The 17.0 figures come from running `backport-to-17.sh` over a copy of the 18.0 tree and
 installing the result, which also makes the recipe below a tested artefact rather than a
