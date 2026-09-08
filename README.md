@@ -89,7 +89,7 @@ recorded, and each has a script that performs the mechanical part and verifies t
 The models, transport, security rules and tests are the same code on every branch, give or
 take what each series renamed. The view layer is where the series genuinely differ: 16 has
 only the older `attrs` domain form, 17 and 18 differ over the list-view tag, and 19 moved
-access groups onto its new privilege records. Every branch installs and runs the same 330
+access groups onto its new privilege records. Every branch installs and runs the same 331
 tests on its own series; run them with `--test-enable` against the series you deploy.
 
 Note that 16.0 and 15.0 are outside Odoo's own support window — Odoo maintains the three
