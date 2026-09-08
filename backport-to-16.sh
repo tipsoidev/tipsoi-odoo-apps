@@ -69,6 +69,24 @@ TABLE = {
     "not result":                   "[('result', 'in', [False, ''])]",
     "state != 'done'":              "[('state', '!=', 'done')]",
     "state == 'done'":              "[('state', '=', 'done')]",
+    # -- Device Portal day-wise view -------------------------------------------------
+    # attendance_count rather than the x2many it mirrors: the equivalence checker
+    # enumerates values per field type and has no many2many branch, and an Integer is
+    # both provable and the same claim.
+    "backend_type != 'device_portal' or generate_absences":
+        "['|', ('backend_type', '!=', 'device_portal'), ('generate_absences', '=', True)]",
+    "backend_type != 'device_portal' or not generate_absences":
+        "['|', ('backend_type', '!=', 'device_portal'), ('generate_absences', '=', False)]",
+    "attendance_count == 0":           "[('attendance_count', '=', 0)]",
+    "day_type != 'partial'":           "[('day_type', '!=', 'partial')]",
+    "day_type != 'absent'":            "[('day_type', '!=', 'absent')]",
+    "not is_late":                     "[('is_late', '=', False)]",
+    "not is_early":                    "[('is_early', '=', False)]",
+    "not has_break":                   "[('has_break', '=', False)]",
+    "not state_reason":                "[('state_reason', 'in', [False, ''])]",
+    "job not in ('punches', 'attendance', 'days')":
+        "[('job', 'not in', ['punches', 'attendance', 'days'])]",
+    "job != 'days'":                   "[('job', '!=', 'days')]",
 }
 
 # Static values keep the 17 spelling: `invisible="1"` is valid on 16 too.

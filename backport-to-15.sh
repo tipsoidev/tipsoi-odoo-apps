@@ -19,7 +19,11 @@ M=tipsoi_connector
 #    than just this recordset. That is safe in every call site here -- flushing or dropping
 #    more than needed costs a query, it does not change an outcome -- but it is the reason
 #    this is a backport direction only and must not be carried forward.
-sed -i 's|\.flush_recordset(|.flush(|g' $M/models/*.py $M/wizards/*.py
+# tests/ included, like the invalidate line below it. It was omitted here because at
+# the time no test called flush_recordset -- then one did, and the substitution
+# skipped it. The verification below caught it, but the file list should describe
+# where the call *can* appear, not where it happened to appear once.
+sed -i 's|\.flush_recordset(|.flush(|g' $M/models/*.py $M/wizards/*.py $M/tests/*.py
 sed -i 's|\.invalidate_recordset(|.invalidate_cache(|g' $M/models/*.py $M/wizards/*.py $M/tests/*.py
 
 #    `env.invalidate_all(flush=False)` arrived in 16 as well. Its body there is exactly

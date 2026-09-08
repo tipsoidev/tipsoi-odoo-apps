@@ -18,7 +18,7 @@ Verified 2026-08-21 by installing on the official `odoo:15` image against Postgr
 | Install | ✅ `installed`, exit 0 |
 | Module tests | ✅ **254 tests, 0 failed, 0 errors** |
 | Views render (`load_views`) | ✅ 11 actions, 20 views, 0 failures |
-| Menus / crons registered | ✅ 9 crons, all repeating |
+| Menus / crons registered | ✅ 10 crons, all repeating |
 | Unique constraints in Postgres | ✅ all 5 present |
 | Domain equivalence | ✅ **172 combinations, 30 conditions, 0 mismatches** |
 
@@ -30,7 +30,7 @@ Python on this image is 3.9.2, and the module carries no 3.10+ syntax.
 
 | 16+ | 15 | Where |
 |---|---|---|
-| `records.flush_recordset()` | `records.flush()` | 3 sites in `models/` |
+| `records.flush_recordset()` | `records.flush()` | 3 sites in `models/`, 1 in `tests/` |
 | `records.invalidate_recordset()` | `records.invalidate_cache()` | 19 sites, all in `tests/` |
 | `env.invalidate_all(flush=False)` | `env.cache.invalidate()` | 6 sites in `models/` |
 

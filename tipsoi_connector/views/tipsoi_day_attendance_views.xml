@@ -193,8 +193,13 @@
     <field name="search_view_id" ref="view_tipsoi_day_attendance_search"/>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No days yet</p>
-      <p>Days come from the Tipsoi app, already summarised per employee per day. Open the
-         backend and press Sync Attendance, then Import Days.</p>
+      <p>On a Tipsoi app (HRM) backend, days come from the app already summarised per
+         employee per day. They arrive on a schedule; to fetch them now, open the backend
+         and press Sync Attendance, then Import Days.</p>
+      <p>If this backend is <em>Device Portal only</em>, this is the wrong screen and it
+         will always be empty — that mode has no day feed to read. Its day-wise view is
+         built in Odoo from the punches instead, and the Daily Attendance menu opens it
+         for you. This screen is only reachable directly.</p>
       <p>A day that will not import keeps the reason on the row. Fetch punches pulls the
          real punch detail for one employee and day, which is the repair tool for a day
          whose times look wrong.</p>

@@ -29,6 +29,7 @@ class TipsoiSyncRun(models.Model):
          ("devices", "Devices & projects"),
          ("punches", "Punch poll"),
          ("pairing", "Pairing"),
+         ("days", "Day build"),
          ("attendance", "Attendance & masters"),
          ("day_import", "Day import"),
          ("photos", "Photo backfill"),
