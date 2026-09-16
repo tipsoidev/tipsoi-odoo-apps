@@ -156,7 +156,7 @@
                          ('day_date','&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
         <filter name="this_month" string="This month"
                 domain="[('day_date','&gt;=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d'))]"/>
-        <group expand="0" string="Group By">
+        <group>
           <filter name="group_day_type" string="Status"
                   context="{'group_by': 'day_type'}"/>
           <filter name="group_employee" string="Employee"

@@ -93,11 +93,9 @@ class TipsoiDevice(models.Model):
     last_sync = fields.Datetime(readonly=True)
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        ("uniq_backend_identifier",
-         "unique(backend_id, identifier)",
-         "This device is already registered for this Tipsoi backend."),
-    ]
+    _uniq_backend_identifier = models.Constraint(
+        "unique(backend_id, identifier)",
+        "This device is already registered for this Tipsoi backend.")
 
     @api.depends("description", "location", "identifier")
     def _compute_name(self):

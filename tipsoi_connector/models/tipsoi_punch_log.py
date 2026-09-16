@@ -117,11 +117,9 @@ class TipsoiPunchLog(models.Model):
     attendance_id = fields.Many2one("hr.attendance", ondelete="set null", index=True)
     raw_payload = fields.Text(readonly=True)
 
-    _sql_constraints = [
-        ("uniq_backend_log",
-         "unique(backend_id, tipsoi_log_id)",
-         "This Tipsoi punch has already been imported."),
-    ]
+    _uniq_backend_log = models.Constraint(
+        "unique(backend_id, tipsoi_log_id)",
+        "This Tipsoi punch has already been imported.")
 
     # ----------------------------------------------------------------------------------
     # display

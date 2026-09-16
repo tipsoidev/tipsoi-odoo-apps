@@ -198,7 +198,7 @@
                 domain="[('device_type','=','access')]"/>
         <separator/>
         <filter name="archived" string="Archived" domain="[('active','=',False)]"/>
-        <group expand="0" string="Group By">
+        <group>
           <filter name="group_device_type" string="Reader type"
                   context="{'group_by': 'device_type'}"/>
           <filter name="group_remote_status" string="Remote status"

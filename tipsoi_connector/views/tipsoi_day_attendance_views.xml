@@ -176,7 +176,7 @@
         <filter name="today" string="Today"
                 domain="[('day_date','&gt;=', context_today().strftime('%Y-%m-%d')),
                          ('day_date','&lt;', (context_today() + relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
-        <group expand="0" string="Group By">
+        <group>
           <filter name="group_state" string="State" context="{'group_by': 'state'}"/>
           <filter name="group_employee" string="Employee"
                   context="{'group_by': 'employee_id'}"/>

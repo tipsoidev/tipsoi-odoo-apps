@@ -132,11 +132,9 @@ class TipsoiDaySummary(models.Model):
 
     state_reason = fields.Text(readonly=True)
 
-    _sql_constraints = [
-        ("uniq_backend_employee_day",
-         "unique(backend_id, employee_id, day_date)",
-         "This employee already has a day row for that date on this backend."),
-    ]
+    _uniq_backend_employee_day = models.Constraint(
+        "unique(backend_id, employee_id, day_date)",
+        "This employee already has a day row for that date on this backend.")
 
     # ----------------------------------------------------------------------------------
     # display

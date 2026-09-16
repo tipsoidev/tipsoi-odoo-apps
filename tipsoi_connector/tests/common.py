@@ -245,6 +245,16 @@ class TipsoiCase(TransactionCase):
         """The audited run wrapper the jobs themselves use."""
         return self.env["tipsoi.sync.run"].track(backend, job)
 
+    def _groups_field(self):
+        """`res.users.groups_id` was renamed `group_ids` in Odoo 19.
+
+        Asked of the model rather than branched on a version number, so this one file
+        serves every supported series and the test tree stays byte-identical across
+        branches -- the invariant the backport recipe depends on.
+        """
+        users = self.env["res.users"]
+        return "group_ids" if "group_ids" in users._fields else "groups_id"
+
     def _plain_user(self):
         """A user with HR rights but *not* the Tipsoi administrator role.
 
@@ -254,7 +264,7 @@ class TipsoiCase(TransactionCase):
         """
         return self.env["res.users"].create({
             "name": "Plain HR", "login": "plain-hr-tipsoi",
-            "groups_id": [(6, 0, [
+            self._groups_field(): [(6, 0, [
                 self.env.ref("base.group_user").id,
                 self.env.ref("hr.group_hr_manager").id,
             ])],
