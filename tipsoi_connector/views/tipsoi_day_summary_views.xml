@@ -17,6 +17,8 @@
         <field name="employee_identifier" optional="hide"/>
         <field name="check_in_utc"/>
         <field name="check_out_utc"/>
+        <field name="first_punch_utc" optional="show"/>
+        <field name="last_punch_utc" optional="hide"/>
         <field name="worked_hours" widget="float_time" sum="Worked"/>
         <field name="span_hours" widget="float_time" sum="On site" optional="hide"/>
         <field name="expected_hours" widget="float_time" sum="Expected" optional="hide"/>
@@ -61,9 +63,11 @@
 
           <div class="alert alert-warning" role="alert"
                attrs="{'invisible': [('day_type', '!=', 'partial')]}">
-            This day has punches but no completed entry-and-exit pair. Most often that is
-            an entry still waiting for its exit, and it pairs itself as soon as one
-            arrives — nothing needs doing. If it stays this way, open the punches.
+            This day has punches but no completed entry-and-exit pair, so no hours are
+            claimed for it. Usually the device recorded a single punch, or an entry whose
+            exit has not arrived yet — that one pairs itself as soon as it does, and
+            nothing needs doing. What the devices actually recorded is First punch and
+            Last punch above; the Why tab says which case this is.
           </div>
           <div class="alert alert-danger" role="alert" attrs="{'invisible': [('day_type', '!=', 'absent')]}">
             No punch on a day the working calendar counts as working. The Device Portal
@@ -76,6 +80,8 @@
               <field name="day_date"/>
               <field name="check_in_utc"/>
               <field name="check_out_utc"/>
+              <field name="first_punch_utc"/>
+              <field name="last_punch_utc"/>
               <field name="worked_hours" widget="float_time"/>
               <field name="span_hours" widget="float_time"/>
               <field name="expected_hours" widget="float_time"/>
