@@ -74,7 +74,7 @@
     <field name="name">tipsoi.device.list</field>
     <field name="model">tipsoi.device</field>
     <field name="arch" type="xml">
-      <list string="Devices" create="false"
+      <tree string="Devices" create="false"
             decoration-danger="connectivity_known and not is_online"
             decoration-muted="not connectivity_known">
         <field name="name"/>
@@ -96,7 +96,7 @@
         <field name="last_sync" optional="hide"/>
         <field name="backend_id" optional="show"/>
         <field name="company_id" groups="base.group_multi_company" optional="hide"/>
-      </list>
+      </tree>
     </field>
   </record>
 
@@ -213,7 +213,7 @@
   <record id="action_tipsoi_device" model="ir.actions.act_window">
     <field name="name">Devices</field>
     <field name="res_model">tipsoi.device</field>
-    <field name="view_mode">kanban,list,form</field>
+    <field name="view_mode">kanban,tree,form</field>
     <field name="search_view_id" ref="view_tipsoi_device_search"/>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No readers yet</p>

@@ -5,7 +5,7 @@
     <field name="name">tipsoi.punch.log.list</field>
     <field name="model">tipsoi.punch.log</field>
     <field name="arch" type="xml">
-      <list string="Punch Logs" create="false"
+      <tree string="Punch Logs" create="false"
             decoration-danger="state == 'error'"
             decoration-warning="state in ('unmatched', 'unpaired')"
             decoration-muted="state == 'duplicate'"
@@ -38,7 +38,7 @@
                decoration-warning="state in ('unmatched', 'unpaired')"
                decoration-danger="state == 'error'"
                decoration-muted="state == 'duplicate'"/>
-      </list>
+      </tree>
     </field>
   </record>
 
@@ -166,7 +166,7 @@
   <record id="action_tipsoi_punch_log" model="ir.actions.act_window">
     <field name="name">Punch Logs</field>
     <field name="res_model">tipsoi.punch.log</field>
-    <field name="view_mode">list,form</field>
+    <field name="view_mode">tree,form</field>
     <field name="search_view_id" ref="view_tipsoi_punch_log_search"/>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No punches yet</p>
@@ -178,7 +178,7 @@
   <record id="action_tipsoi_unmatched_punch" model="ir.actions.act_window">
     <field name="name">Unmatched Punches</field>
     <field name="res_model">tipsoi.punch.log</field>
-    <field name="view_mode">list,form</field>
+    <field name="view_mode">tree,form</field>
     <field name="search_view_id" ref="view_tipsoi_punch_log_search"/>
     <field name="domain">[('state','=','unmatched')]</field>
     <field name="help" type="html">

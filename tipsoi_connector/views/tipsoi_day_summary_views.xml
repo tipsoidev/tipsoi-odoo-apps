@@ -5,7 +5,7 @@
     <field name="name">tipsoi.day.summary.list</field>
     <field name="model">tipsoi.day.summary</field>
     <field name="arch" type="xml">
-      <list string="Daily Attendance" create="false" edit="false"
+      <tree string="Daily Attendance" create="false" edit="false"
             decoration-danger="day_type == 'absent'"
             decoration-warning="day_type == 'partial'">
         <header>
@@ -37,7 +37,7 @@
                decoration-success="day_type == 'present'"
                decoration-warning="day_type == 'partial'"
                decoration-danger="day_type == 'absent'"/>
-      </list>
+      </tree>
     </field>
   </record>
 
@@ -170,7 +170,7 @@
   <record id="action_tipsoi_day_summary" model="ir.actions.act_window">
     <field name="name">Daily Attendance</field>
     <field name="res_model">tipsoi.day.summary</field>
-    <field name="view_mode">list,form</field>
+    <field name="view_mode">tree,form</field>
     <field name="search_view_id" ref="view_tipsoi_day_summary_search"/>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No days yet</p>
