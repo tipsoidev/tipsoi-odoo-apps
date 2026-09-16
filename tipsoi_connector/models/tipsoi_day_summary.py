@@ -69,6 +69,17 @@ class TipsoiDaySummary(models.Model):
     check_in_utc = fields.Datetime(readonly=True, string="Check in (UTC)")
     check_out_utc = fields.Datetime(readonly=True, string="Check out (UTC)")
 
+    first_punch_utc = fields.Datetime(
+        readonly=True, string="First punch (UTC)",
+        help="The earliest raw punch belonging to this day, paired or not. Deliberately "
+             "separate from Check in: Check in is what pairing produced, and a day the "
+             "device recorded a single punch on has a first punch and no check-in at "
+             "all. This is the column to reconcile against the Tipsoi panel.")
+    last_punch_utc = fields.Datetime(
+        readonly=True, string="Last punch (UTC)",
+        help="The latest raw punch belonging to this day. Equal to the first punch when "
+             "the device recorded only one.")
+
     worked_hours = fields.Float(
         readonly=True, string="Worked",
         help="The day's attendance hours added up, so a break between two pairs is "
@@ -90,8 +101,10 @@ class TipsoiDaySummary(models.Model):
     attendance_count = fields.Integer(readonly=True, string="Pairs")
     punch_count = fields.Integer(
         readonly=True, string="Punches",
-        help="Raw punches on this local day. More punches than twice the pairs means "
-             "the day had breaks or a punch that has not paired yet.")
+        help="Raw punches belonging to this day. A punch that paired belongs to the day "
+             "its shift started, so an overnight shift's exit punch counts here rather "
+             "than on the following morning. More punches than twice the pairs means the "
+             "day had breaks or a punch that has not paired yet.")
 
     day_type = fields.Selection(
         [("present", "Present"),
@@ -158,7 +171,12 @@ class TipsoiDaySummary(models.Model):
         }
 
     def action_open_punches(self):
-        """The raw punches behind this day -- the first stop when a number looks wrong."""
+        """The raw punches behind this day -- the first stop when a number looks wrong.
+
+        The domain mirrors how `_punch_index` buckets, and it has to: filing on
+        `punch_day` alone would show a different set from the one Punches counts, so an
+        overnight shift would open two punches on a row that says three.
+        """
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
@@ -166,6 +184,9 @@ class TipsoiDaySummary(models.Model):
             "res_model": "tipsoi.punch.log",
             "domain": [("backend_id", "=", self.backend_id.id),
                        ("employee_id", "=", self.employee_id.id),
+                       "|",
+                       ("attendance_id", "in", self.attendance_ids.ids),
+                       "&", ("attendance_id", "=", False),
                        ("punch_day", "=", self.day_date)],
             "view_mode": "list,form",
         }
@@ -199,10 +220,10 @@ class TipsoiDaySummary(models.Model):
         start_utc = self._local_midnight_utc(tz, first_day) - margin
         end_utc = self._local_midnight_utc(tz, last_day + timedelta(days=1)) + margin
 
-        by_employee_day = self._attendance_index(
+        by_employee_day, day_by_attendance = self._attendance_index(
             employees, start_utc, end_utc, tz, first_day, last_day)
         punches_by_key, absence_bounds = self._punch_index(
-            backend, employees, first_day, last_day)
+            backend, employees, first_day, last_day, day_by_attendance)
 
         existing = {
             (row.employee_id.id, row.day_date): row
@@ -226,7 +247,7 @@ class TipsoiDaySummary(models.Model):
                 vals = self._day_values(
                     backend, employee, day, tz, cal_tz,
                     by_employee_day.get(key, self.env["hr.attendance"]),
-                    punches_by_key.get(key, 0),
+                    punches_by_key.get(key, (0, None, None)),
                     absence_bounds.get(employee.id),
                     slots, two_weeks)
                 new = self._upsert(
@@ -260,7 +281,11 @@ class TipsoiDaySummary(models.Model):
 
     @api.model
     def _attendance_index(self, employees, start_utc, end_utc, tz, first_day, last_day):
-        """`{(employee_id, local_day): attendances}`, keyed on the check-in's local day.
+        """`({(employee_id, local_day): attendances}, {attendance_id: local_day})`.
+
+        Both are keyed on the check-in's local day. The second is what lets the punch side
+        agree with this one: a punch that paired belongs to the day its shift *started*,
+        not to the day the punch itself happened.
 
         Records with no check-in are dropped rather than guessed at: without one there is
         no day to file them under, and inventing one would move somebody's hours.
@@ -272,42 +297,86 @@ class TipsoiDaySummary(models.Model):
         ], order="check_in asc")
 
         index = {}
+        day_by_attendance = {}
         for attendance in attendances:
             if not attendance.check_in:
                 continue
             day = pytz.UTC.localize(attendance.check_in).astimezone(tz).date()
+            # Recorded before the window filter below, and on purpose: a punch paired to a
+            # shift that started outside the window still has to be *recognisable* as
+            # such, so it can be dropped rather than fall back to its own date and invent
+            # a row on a morning nobody worked.
+            day_by_attendance[attendance.id] = day
             if day < first_day or day > last_day:
                 continue
             index.setdefault((attendance.employee_id.id, day),
                              self.env["hr.attendance"])
             index[(attendance.employee_id.id, day)] |= attendance
-        return index
+        return index, day_by_attendance
 
     @api.model
-    def _punch_index(self, backend, employees, first_day, last_day):
-        """`({(employee_id, day): count}, {employee_id: first ever punch day})`.
+    def _punch_index(self, backend, employees, first_day, last_day, day_by_attendance):
+        """`({(employee_id, day): (count, first, last)}, {employee_id: (floor, ceiling)})`.
 
-        The second is the absence floor. Somebody who had not yet been enrolled on a
-        device was not absent -- there was simply nothing to record them with, and
-        marking those days absent would invent a fortnight of nothing for every new hire.
+        **Which day a punch belongs to.** A punch that paired belongs to the local day its
+        attendance *started*; a punch that did not belongs to its own `punch_day`. Filing
+        every punch under its own date instead is what used to manufacture a phantom
+        Incomplete row on the morning after an overnight shift: the 06:00 exit landed on a
+        day whose attendance sat on the day before, so that morning looked like a punch
+        that never paired when it had paired perfectly -- and looked identical to a real
+        single-punch day, which is the one thing this view has to be able to show.
 
-        `search_read` and a Python tally rather than `read_group`: the grouping API's
-        name and signature both moved inside the series range this module ships on, and
-        the window is one employee-set over a few days, so the aggregation is not worth a
-        portability problem.
+        The search runs a day wider than the window on each side and the results are
+        filtered back, because a shift starting 22:00 on the last day keeps its exit punch
+        on the day after. A punch whose attendance is missing from `day_by_attendance` is
+        dropped, and the invariant has to be read in this direction: *every* attendance
+        whose check-in day falls inside the window is loaded, so being missing proves the
+        shift started outside it and the punch belongs to a day this run is not building.
+        It does not run the other way -- punches come from the widened range, and one on
+        the day before the window can legitimately pair to an attendance two days back
+        that was never searched for.
+
+        The second return is the absence floor and ceiling. Somebody who had not yet been
+        enrolled on a device was not absent -- there was simply nothing to record them
+        with, and marking those days absent would invent a fortnight of nothing for every
+        new hire.
+
+        A `search` and a Python tally rather than `read_group`: the grouping API's name
+        and signature both moved inside the series range this module ships on, and the
+        window is one employee-set over a few days, so the aggregation is not worth a
+        portability problem. Not `search_read` either -- reading `attendance_id` through
+        it pulls a display name for every punch, and on a quarter-long backfill that is
+        tens of thousands of dates formatted and thrown away.
         """
-        rows = self.env["tipsoi.punch.log"].search_read(
-            [("backend_id", "=", backend.id),
-             ("employee_id", "in", employees.ids),
-             ("punch_day", ">=", first_day),
-             ("punch_day", "<=", last_day)],
-            ["employee_id", "punch_day"])
+        punches = self.env["tipsoi.punch.log"].search([
+            ("backend_id", "=", backend.id),
+            ("employee_id", "in", employees.ids),
+            ("punch_day", ">=", first_day - timedelta(days=1)),
+            ("punch_day", "<=", last_day + timedelta(days=1)),
+        ])
         counts = {}
-        for row in rows:
-            if not row.get("employee_id") or not row.get("punch_day"):
+        for punch in punches:
+            if not punch.employee_id or not punch.punch_day:
                 continue
-            key = (row["employee_id"][0], fields.Date.to_date(row["punch_day"]))
-            counts[key] = counts.get(key, 0) + 1
+            attendance_id = punch.attendance_id.id
+            if attendance_id:
+                day = day_by_attendance.get(attendance_id)
+                if day is None:
+                    continue
+            else:
+                day = punch.punch_day
+            if day < first_day or day > last_day:
+                continue
+            key = (punch.employee_id.id, day)
+            count, first, last = counts.get(key, (0, None, None))
+            count += 1
+            moment = punch.punch_time_utc or None
+            if moment:
+                if first is None or moment < first:
+                    first = moment
+                if last is None or moment > last:
+                    last = moment
+            counts[key] = (count, first, last)
 
         bounds = {}
         if backend.generate_absences:
@@ -388,19 +457,27 @@ class TipsoiDaySummary(models.Model):
                     bounds, slots, two_weeks):
         """The values this day *should* have. Returns None when there is no row to keep.
 
+        `punches` is `(count, first, last)` from `_punch_index` -- the raw evidence, which
+        exists on days pairing produced nothing for. That is the whole reason the first
+        and last punch are reported separately from check-in and check-out: a day the
+        device recorded once has a punch time and no attendance at all, and showing it a
+        blank row is what makes it look like the punch never arrived.
+
         Nothing is written here. Separating the decision from the write is what makes the
         "did anything change?" comparison in `_upsert` possible, and that comparison is
         what keeps a fifteen-minute cron from rewriting every row of a quiet office.
         """
+        punch_count, first_punch, last_punch = punches
         expected = tipsoi_schedule.expected_hours(slots, day, two_weeks)
         closed = attendances.filtered(lambda a: a.check_out)
 
-        if not attendances and not punches:
+        if not attendances and not punch_count:
             if not self._should_mark_absent(backend, day, bounds, slots, two_weeks):
                 return None
             return {
                 "day_type": "absent",
                 "check_in_utc": False, "check_out_utc": False,
+                "first_punch_utc": False, "last_punch_utc": False,
                 "worked_hours": 0.0, "span_hours": 0.0, "expected_hours": expected,
                 "attendance_ids": [(6, 0, [])],
                 "attendance_count": 0, "punch_count": 0,
@@ -420,18 +497,19 @@ class TipsoiDaySummary(models.Model):
             "day_type": "present" if closed else "partial",
             "check_in_utc": check_in or False,
             "check_out_utc": check_out or False,
+            "first_punch_utc": first_punch or False,
+            "last_punch_utc": last_punch or False,
             "worked_hours": round(sum(closed.mapped("worked_hours")), 2),
             "span_hours": round(span, 2),
             "expected_hours": expected,
             "attendance_ids": [(6, 0, attendances.ids)],
             "attendance_count": len(attendances),
-            "punch_count": punches,
+            "punch_count": punch_count,
             "state_reason": False,
         }
         if not closed:
-            vals["state_reason"] = _(
-                "Punches arrived but no entry and exit have paired yet. An entry pairs "
-                "itself as soon as its exit does arrive.") if punches else False
+            vals["state_reason"] = self._incomplete_reason(
+                punch_count, bool(attendances))
         vals.update(self._punctuality(
             backend, day, cal_tz, check_in, check_out, slots, two_weeks))
         # Short hours is the third calendar-derived judgement, so it waits on the same
@@ -445,6 +523,31 @@ class TipsoiDaySummary(models.Model):
         # first-in and last-out, so this is a distinction only the derived view can make.
         vals["has_break"] = bool(vals["span_hours"] > vals["worked_hours"] + 0.02)
         return vals
+
+    @api.model
+    def _incomplete_reason(self, punch_count, has_attendance):
+        """Why a day has no finished pair, in the terms of what actually arrived.
+
+        Split by case rather than worded once for all of them, because the cases want
+        different things done about them: an open entry wants waiting, a single punch
+        wants nothing at all, and several punches that would not pair want looking at.
+        A reader who cannot tell which one they have opens the punches every time.
+        """
+        if has_attendance:
+            return _(
+                "An entry is open with no exit recorded against it yet. It closes itself "
+                "as soon as the exit punch arrives.")
+        if punch_count == 1:
+            return _(
+                "The device recorded one punch on this day and no second one, so there "
+                "is nothing to pair into attendance. The punch itself is shown as First "
+                "punch. No hours are claimed for it, because none can be worked out from "
+                "a single reading.")
+        if punch_count:
+            return _(
+                "%s punches arrived on this day and none of them paired into an entry "
+                "and an exit. Open the punches to see which ones and why.", punch_count)
+        return False
 
     @api.model
     def _should_mark_absent(self, backend, day, bounds, slots, two_weeks):
@@ -515,10 +618,10 @@ class TipsoiDaySummary(models.Model):
 
     #: Compared to decide whether a stored row still matches what was just computed.
     #: `attendance_ids` is handled separately, being a command list rather than a value.
-    _COMPARED = ("day_type", "check_in_utc", "check_out_utc", "worked_hours",
-                 "span_hours", "expected_hours", "attendance_count", "punch_count",
-                 "is_late", "late_minutes", "is_early", "early_minutes", "is_short",
-                 "has_break", "state_reason")
+    _COMPARED = ("day_type", "check_in_utc", "check_out_utc", "first_punch_utc",
+                 "last_punch_utc", "worked_hours", "span_hours", "expected_hours",
+                 "attendance_count", "punch_count", "is_late", "late_minutes",
+                 "is_early", "early_minutes", "is_short", "has_break", "state_reason")
 
     @api.model
     def _upsert(self, backend, employee, day, vals, row, counters):
