@@ -8,7 +8,7 @@
     <field name="model">tipsoi.manual.sync</field>
     <field name="arch" type="xml">
       <form string="Manual Sync">
-        <div class="alert alert-warning" role="alert" invisible="not mode_warning">
+        <div class="alert alert-warning" role="alert" attrs="{'invisible': [('mode_warning', 'in', [False, ''])]}">
           <field name="mode_warning" readonly="1" nolabel="1"/>
         </div>
 
@@ -17,18 +17,18 @@
             <field name="backend_id"/>
             <field name="job"/>
           </group>
-          <group invisible="job not in ('punches', 'attendance', 'days')">
+          <group attrs="{'invisible': [('job', 'not in', ['punches', 'attendance', 'days'])]}">
             <field name="date_from"/>
             <field name="date_to"/>
           </group>
         </group>
 
-        <div class="text-muted" invisible="job not in ('punches', 'attendance')">
+        <div class="text-muted" attrs="{'invisible': [('job', 'not in', ['punches', 'attendance'])]}">
           Leaving the window empty falls back to the backend's own cursor, which is what
           the scheduled run uses. Set it only to re-read a period on purpose.
         </div>
 
-        <div class="text-muted" invisible="job != 'days'">
+        <div class="text-muted" attrs="{'invisible': [('job', '!=', 'days')]}">
           The day build rewrites the day-wise view for the range given, from attendance
           that pairing has already written — so poll punches for the same range first, or
           there is nothing to summarise. Leaving the window empty rebuilds the backend's
@@ -36,7 +36,7 @@
           the same range changes nothing the second time.
         </div>
 
-        <group invisible="not result">
+        <group attrs="{'invisible': [('result', 'in', [False, ''])]}">
           <field name="result" readonly="1" nolabel="1"/>
         </group>
 
@@ -77,17 +77,17 @@
 
         <group string="Selected punches">
           <field name="punch_log_ids" readonly="1" nolabel="1">
-            <list create="false" delete="false" edit="false">
+            <tree create="false" delete="false" edit="false">
               <field name="punch_time_utc"/>
               <field name="person_identifier"/>
               <field name="device_id"/>
               <field name="direction"/>
               <field name="state"/>
-            </list>
+            </tree>
           </field>
         </group>
 
-        <group invisible="not result">
+        <group attrs="{'invisible': [('result', 'in', [False, ''])]}">
           <field name="result" readonly="1" nolabel="1"/>
         </group>
 
@@ -125,14 +125,14 @@
           <field name="device_ids" widget="many2many_tags"/>
         </group>
 
-        <group invisible="state != 'done'">
+        <group attrs="{'invisible': [('state', '!=', 'done')]}">
           <field name="result" readonly="1" nolabel="1"/>
         </group>
         <field name="state" invisible="1"/>
 
         <footer>
           <button name="action_apply" type="object" string="Apply" class="oe_highlight"
-                  invisible="state == 'done'"/>
+                  attrs="{'invisible': [('state', '=', 'done')]}"/>
           <button string="Close" class="btn-secondary" special="cancel"/>
         </footer>
       </form>

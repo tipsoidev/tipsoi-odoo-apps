@@ -287,7 +287,7 @@ class TestPunchPairing(TipsoiCase):
         first = self._punch("u1", datetime(2026, 8, 1, 3, 0))
         self._punch("u2", datetime(2026, 8, 1, 11, 0))
         self._pair()
-        first.invalidate_recordset()
+        first.invalidate_cache()
         self.assertEqual(first.direction, "unknown")
         self.assertEqual(first.state, "paired")
 
@@ -315,8 +315,8 @@ class TestPunchPairing(TipsoiCase):
         self._pair()
 
         self.assertEqual(len(self._attendances()), 0)
-        entry.invalidate_recordset()
-        late.invalidate_recordset()
+        entry.invalidate_cache()
+        late.invalidate_cache()
         self.assertEqual(entry.state, "unpaired")
         self.assertEqual(late.state, "unpaired")
 
@@ -330,7 +330,7 @@ class TestPunchPairing(TipsoiCase):
         self._punch("u3", datetime(2026, 8, 1, 11, 0), "out")
         self._pair()
 
-        repeat.invalidate_recordset()
+        repeat.invalidate_cache()
         self.assertEqual(repeat.state, "duplicate")
         attendance = self._attendances()
         self.assertEqual(len(attendance), 1)
@@ -360,7 +360,7 @@ class TestPunchPairing(TipsoiCase):
         self.assertEqual(len(attendance), 1)
         self.assertFalse(attendance.filtered(lambda a: not a.check_out),
                          "no open attendance may be created")
-        trailing.invalidate_recordset()
+        trailing.invalidate_cache()
         self.assertEqual(trailing.state, "unpaired")
         self.assertTrue(trailing.state_reason)
 
@@ -370,8 +370,8 @@ class TestPunchPairing(TipsoiCase):
         self._pair()
 
         self.assertEqual(len(self._attendances()), 0)
-        first.invalidate_recordset()
-        second.invalidate_recordset()
+        first.invalidate_cache()
+        second.invalidate_cache()
         self.assertEqual(first.state, "unpaired")
         self.assertIn("entry", (first.state_reason or "").lower())
         self.assertEqual(second.state, "unpaired")
@@ -380,7 +380,7 @@ class TestPunchPairing(TipsoiCase):
         orphan = self._punch("u1", datetime(2026, 8, 1, 11, 0), "out")
         self._pair()
         self.assertEqual(len(self._attendances()), 0)
-        orphan.invalidate_recordset()
+        orphan.invalidate_cache()
         self.assertEqual(orphan.state, "unpaired")
 
     def test_a_late_exit_pairs_a_previously_unpaired_entry(self):
@@ -464,8 +464,8 @@ class TestPunchPairing(TipsoiCase):
 
         self.assertEqual(run.state, "partial")
         self.assertEqual(run.failed, 1)
-        first.invalidate_recordset()
-        second.invalidate_recordset()
+        first.invalidate_cache()
+        second.invalidate_cache()
         self.assertEqual(first.state, "error")
         self.assertTrue(first.state_reason)
         self.assertEqual(second.state, "error")
@@ -495,7 +495,7 @@ class TestPunchPairing(TipsoiCase):
             "state": "unmatched",
         })
         self._pair()
-        ghost.invalidate_recordset()
+        ghost.invalidate_cache()
         self.assertEqual(ghost.state, "unmatched")
         self.assertFalse(ghost.attendance_id)
 

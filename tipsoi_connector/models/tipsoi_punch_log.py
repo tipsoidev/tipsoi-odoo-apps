@@ -275,11 +275,11 @@ class TipsoiPunchLog(models.Model):
                     record = self.create(dict(vals, backend_id=backend.id,
                                               tipsoi_log_id=uid))
                     counters["created"] += 1
-                record.flush_recordset()
+                record.flush()
         except Exception as exc:              # noqa: BLE001 - recorded, not swallowed
             # The cache can still hold values written inside the rolled-back savepoint,
             # and reading them later would be reading rows that no longer exist.
-            self.env.invalidate_all(flush=False)
+            self.env.cache.invalidate()
             counters["failed"] += 1
             _logger.warning("Tipsoi punch %s could not be imported: %s", uid, exc)
             return self.browse()
@@ -507,9 +507,9 @@ class TipsoiPunchLog(models.Model):
                         "check_in": entry.punch_time_utc,
                         "check_out": exit_.punch_time_utc,
                     })
-                    attendance.flush_recordset()
+                    attendance.flush()
             except ValidationError as exc:
-                self.env.invalidate_all(flush=False)
+                self.env.cache.invalidate()
                 message = _("Odoo would not accept this pair: %s", exc)
                 plan[entry] = ("error", message)
                 plan[exit_] = ("error", message)
