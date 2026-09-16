@@ -5,7 +5,7 @@
     <field name="name">tipsoi.day.summary.list</field>
     <field name="model">tipsoi.day.summary</field>
     <field name="arch" type="xml">
-      <list string="Daily Attendance" create="false" edit="false"
+      <tree string="Daily Attendance" create="false" edit="false"
             decoration-danger="day_type == 'absent'"
             decoration-warning="day_type == 'partial'">
         <header>
@@ -37,7 +37,7 @@
                decoration-success="day_type == 'present'"
                decoration-warning="day_type == 'partial'"
                decoration-danger="day_type == 'absent'"/>
-      </list>
+      </tree>
     </field>
   </record>
 
@@ -48,7 +48,7 @@
       <form string="Daily Attendance" create="false" edit="false">
         <header>
           <button name="action_open_attendance" type="object" string="Attendance"
-                  icon="fa-calendar-check-o" invisible="attendance_count == 0"/>
+                  icon="fa-calendar-check-o" attrs="{'invisible': [('attendance_count', '=', 0)]}"/>
           <button name="action_open_punches" type="object" string="Punches"
                   icon="fa-clock-o"
                   title="The raw punches behind this day. Where a number looks wrong,
@@ -62,14 +62,14 @@
           </div>
 
           <div class="alert alert-warning" role="alert"
-               invisible="day_type != 'partial'">
+               attrs="{'invisible': [('day_type', '!=', 'partial')]}">
             This day has punches but no completed entry-and-exit pair, so no hours are
             claimed for it. Usually the device recorded a single punch, or an entry whose
             exit has not arrived yet — that one pairs itself as soon as it does, and
             nothing needs doing. What the devices actually recorded is First punch and
             Last punch above; the Why tab says which case this is.
           </div>
-          <div class="alert alert-danger" role="alert" invisible="day_type != 'absent'">
+          <div class="alert alert-danger" role="alert" attrs="{'invisible': [('day_type', '!=', 'absent')]}">
             No punch on a day the working calendar counts as working. The Device Portal
             has no leave, holiday or roster feed, so approved leave looks exactly like an
             unexplained absence here.
@@ -97,9 +97,9 @@
           <group>
             <group string="Punctuality">
               <field name="is_late"/>
-              <field name="late_minutes" invisible="not is_late"/>
+              <field name="late_minutes" attrs="{'invisible': [('is_late', '=', False)]}"/>
               <field name="is_early"/>
-              <field name="early_minutes" invisible="not is_early"/>
+              <field name="early_minutes" attrs="{'invisible': [('is_early', '=', False)]}"/>
               <field name="is_short"/>
               <field name="has_break"/>
             </group>
@@ -109,7 +109,7 @@
             </group>
           </group>
 
-          <div class="alert alert-info" role="alert" invisible="not has_break">
+          <div class="alert alert-info" role="alert" attrs="{'invisible': [('has_break', '=', False)]}">
             On site exceeds Worked, so this day had a break between two separate pairs.
             Worked is the total the employee was on the clock.
           </div>
@@ -123,7 +123,7 @@
               </div>
               <field name="attendance_ids" readonly="1" nolabel="1"/>
             </page>
-            <page string="Why" name="reason" invisible="not state_reason">
+            <page string="Why" name="reason" attrs="{'invisible': [('state_reason', 'in', [False, ''])]}">
               <field name="state_reason" readonly="1" nolabel="1"/>
             </page>
           </notebook>
@@ -170,7 +170,7 @@
   <record id="action_tipsoi_day_summary" model="ir.actions.act_window">
     <field name="name">Daily Attendance</field>
     <field name="res_model">tipsoi.day.summary</field>
-    <field name="view_mode">list,form</field>
+    <field name="view_mode">tree,form</field>
     <field name="search_view_id" ref="view_tipsoi_day_summary_search"/>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No days yet</p>

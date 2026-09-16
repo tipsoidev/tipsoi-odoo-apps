@@ -12,19 +12,19 @@
                groups="tipsoi_connector.group_tipsoi_admin">
             <button name="action_tipsoi_push" type="object" string="Push to Tipsoi"
                     class="btn-primary" icon="fa-cloud-upload"
-                    invisible="not tipsoi_identifier"/>
+                    attrs="{'invisible': [('tipsoi_identifier', 'in', [False, ''])]}"/>
             <button name="action_tipsoi_upload_photo" type="object" string="Send photo"
                     class="btn-secondary" icon="fa-camera"
-                    invisible="not tipsoi_identifier"/>
+                    attrs="{'invisible': [('tipsoi_identifier', 'in', [False, ''])]}"/>
             <button name="action_tipsoi_remove_photo" type="object"
                     string="Remove photo in Tipsoi" class="btn-secondary"
-                    icon="fa-eraser" invisible="not tipsoi_identifier"/>
+                    icon="fa-eraser" attrs="{'invisible': [('tipsoi_identifier', 'in', [False, ''])]}"/>
             <button name="action_tipsoi_reactivate" type="object"
                     string="Reactivate in Tipsoi" class="btn-secondary"
-                    icon="fa-undo" invisible="not tipsoi_identifier"/>
+                    icon="fa-undo" attrs="{'invisible': [('tipsoi_identifier', 'in', [False, ''])]}"/>
             <button name="action_tipsoi_delete_remote" type="object"
                     string="Delete in Tipsoi" class="btn-secondary" icon="fa-trash"
-                    invisible="not tipsoi_identifier"
+                    attrs="{'invisible': [('tipsoi_identifier', 'in', [False, ''])]}"
                     confirm="This deletes the person in Tipsoi outright. A departure is
                              almost always the better choice: a hard delete removes the
                              person that existing attendance rows point at, in Tipsoi and
@@ -33,7 +33,7 @@
           </div>
 
           <div class="alert alert-warning" role="alert"
-               invisible="tipsoi_photo_state != 'rejected'">
+               attrs="{'invisible': [('tipsoi_photo_state', '!=', 'rejected')]}">
             <p class="mb-1"><b>Tipsoi rejected this photo.</b></p>
             <p class="mb-1">It will not work on the readers, and a different picture is
                needed -- a rejection is a final answer about that image, not a transient
@@ -69,11 +69,11 @@
                      decoration-warning="tipsoi_photo_state == 'pending'"
                      decoration-danger="tipsoi_photo_state in ('rejected', 'error')"/>
               <field name="tipsoi_photo_error_code"
-                     invisible="not tipsoi_photo_error_code"/>
+                     attrs="{'invisible': [('tipsoi_photo_error_code', 'in', [False, ''])]}"/>
               <field name="tipsoi_photo_url" widget="url"
-                     invisible="not tipsoi_photo_url"/>
+                     attrs="{'invisible': [('tipsoi_photo_url', 'in', [False, ''])]}"/>
               <field name="tipsoi_photo_error"
-                     invisible="tipsoi_photo_state == 'rejected' or not tipsoi_photo_error"/>
+                     attrs="{'invisible': ['|', ('tipsoi_photo_state', '=', 'rejected'), ('tipsoi_photo_error', 'in', [False, ''])]}"/>
             </group>
           </group>
         </page>
