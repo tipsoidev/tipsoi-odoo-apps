@@ -629,7 +629,7 @@ class TestScoping(DaySummaryCase):
                     "backend_id": self.backend.id,
                     "employee_id": self.employee.id,
                     "day_date": MONDAY,
-                }).flush_recordset()
+                }).flush()
 
 
 @tagged("post_install", "-at_install")
