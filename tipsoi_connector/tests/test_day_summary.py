@@ -78,6 +78,21 @@ class DaySummaryCase(TipsoiCase):
             "state": "paired",
         })
 
+    def _paired(self, check_in, check_out, employee=None):
+        """An attendance together with the two punches it was paired from, linked the way
+        `_attach` links them.
+
+        Most fixtures here create one side or the other. An overnight shift needs both,
+        because the whole question is whether the two sides agree about which day it
+        belongs to -- and a test built from attendance alone cannot ask that.
+        """
+        employee = employee or self.employee
+        attendance = self._attendance(check_in, check_out, employee)
+        entry = self._punch(check_in, "in", employee)
+        leave = self._punch(check_out, "out", employee)
+        (entry | leave).attendance_id = attendance
+        return attendance, entry, leave
+
     def _build(self, first=MONDAY, last=None):
         last = last or first
         window_from = utc(first, 0)
@@ -615,3 +630,160 @@ class TestScoping(DaySummaryCase):
                     "employee_id": self.employee.id,
                     "day_date": MONDAY,
                 }).flush_recordset()
+
+
+@tagged("post_install", "-at_install")
+class TestPunchTimes(DaySummaryCase):
+    """What the devices recorded, reported beside what pairing made of it.
+
+    The report this exists for: a Device Portal client compared the Tipsoi panel against
+    Daily Attendance and said the employees who punched once in a day had "no entries" in
+    Odoo. They had a row -- employee, date, Incomplete -- and two empty time columns,
+    because both of those are filled from paired attendance and a lone punch never pairs.
+    Beside a panel showing 09:03, an empty row reads as a punch that never arrived.
+    """
+
+    def test_a_single_punch_day_reports_the_punch_time(self):
+        self._punch(utc(MONDAY, 9, 3), "in")
+        self._build()
+        day = self._day()
+        self.assertEqual(day.day_type, "partial")
+        self.assertEqual(day.first_punch_utc, utc(MONDAY, 9, 3))
+        self.assertEqual(day.last_punch_utc, utc(MONDAY, 9, 3))
+        self.assertEqual(day.punch_count, 1)
+
+    def test_a_single_punch_day_still_claims_no_attendance(self):
+        """The punch times are evidence; Check in stays whatever pairing produced, which
+        here is nothing. Filling it from a punch would move lateness along with it."""
+        self._punch(utc(MONDAY, 9, 3), "in")
+        self._build()
+        day = self._day()
+        self.assertFalse(day.check_in_utc)
+        self.assertFalse(day.check_out_utc)
+        self.assertEqual(day.attendance_count, 0)
+        self.assertAlmostEqual(day.worked_hours, 0.0, places=2)
+
+    def test_a_single_punch_day_says_which_case_it_is(self):
+        self._punch(utc(MONDAY, 9, 3), "in")
+        self._build()
+        self.assertIn("one punch", self._day().state_reason)
+
+    def test_several_punches_that_did_not_pair_read_differently(self):
+        """A different thing to do about it, so it must not be worded the same."""
+        for minute, uid in ((0, "a"), (1, "b"), (2, "c")):
+            self._punch(utc(MONDAY, 9, minute), "in", uid=uid)
+        self._build()
+        reason = self._day().state_reason
+        self.assertNotIn("one punch", reason)
+        self.assertIn("3", reason)
+
+    def test_a_finished_day_reports_its_punch_times_too(self):
+        """Not only the incomplete ones. This is the column a client reconciles against
+        the Tipsoi panel line by line, so it has to be on every row."""
+        self._paired(utc(MONDAY, 8), utc(MONDAY, 17))
+        self._build()
+        day = self._day()
+        self.assertEqual(day.day_type, "present")
+        self.assertEqual(day.first_punch_utc, utc(MONDAY, 8))
+        self.assertEqual(day.last_punch_utc, utc(MONDAY, 17))
+
+    def test_an_absent_day_carries_no_punch_times(self):
+        """Also the branch that would have raised outright had the two new fields been
+        left out of the absent values -- `_unchanged` indexes every compared name."""
+        self.backend.generate_absences = True
+        self._punch(utc(MONDAY - timedelta(days=7), 8), "in", uid="floor")
+        self._build()
+        day = self._day()
+        self.assertEqual(day.day_type, "absent")
+        self.assertFalse(day.first_punch_utc)
+        self.assertFalse(day.last_punch_utc)
+
+    def test_a_corrected_punch_time_restates_the_row(self):
+        """The guard on `_COMPARED`. A field left out of that tuple is a field the stored
+        row silently never updates, and every existing idempotency test still passes --
+        they all compare data that did not change.
+        """
+        punch = self._punch(utc(MONDAY, 9), "in")
+        self._build()
+        self.assertEqual(self._day().first_punch_utc, utc(MONDAY, 9))
+
+        punch.punch_time_utc = utc(MONDAY, 8)
+        run = self._build()
+        self.assertEqual(self._day().first_punch_utc, utc(MONDAY, 8))
+        self.assertEqual(run.updated, 1)
+
+
+@tagged("post_install", "-at_install")
+class TestOvernightPunchBucketing(DaySummaryCase):
+    """A punch belongs to the day its shift started -- the rule attendance already follows.
+
+    The two sides used to disagree. Attendance was filed under the check-in's local day
+    and punches under their own, so the 06:00 exit of a 22:00 shift landed on the next
+    morning with no attendance beside it, and that morning was written up as an Incomplete
+    day whose punch had never paired. It had paired perfectly. On screen it was
+    indistinguishable from the real single-punch days this view exists to show, which is
+    why it is fixed here rather than filed.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.tuesday = MONDAY + timedelta(days=1)
+
+    def test_the_exit_punch_counts_on_the_day_the_shift_started(self):
+        self._paired(utc(MONDAY, 22), utc(self.tuesday, 6))
+        self._build(MONDAY, self.tuesday)
+        day = self._day(MONDAY)
+        self.assertEqual(day.punch_count, 2)
+        self.assertEqual(day.first_punch_utc, utc(MONDAY, 22))
+        self.assertEqual(day.last_punch_utc, utc(self.tuesday, 6))
+
+    def test_the_morning_after_gets_no_row_at_all(self):
+        self._paired(utc(MONDAY, 22), utc(self.tuesday, 6))
+        self._build(MONDAY, self.tuesday)
+        self.assertFalse(self._day(self.tuesday))
+
+    def test_the_morning_after_is_absent_rather_than_incomplete(self):
+        """With absences on it is a day no shift started on, which is what it is. What it
+        must not be is Incomplete, because nothing about it failed to pair."""
+        self.backend.generate_absences = True
+        self._punch(utc(MONDAY - timedelta(days=7), 8), "in", uid="floor")
+        self._paired(utc(MONDAY, 22), utc(self.tuesday, 6))
+        self._build(MONDAY, self.tuesday)
+        self.assertEqual(self._day(self.tuesday).day_type, "absent")
+
+    def test_a_shift_starting_on_the_last_day_keeps_its_exit_punch(self):
+        """The exit falls the day after the window ends, which is why the punch search
+        runs a day wider on each side and filters back."""
+        self._paired(utc(MONDAY, 22), utc(self.tuesday, 6))
+        self._build(MONDAY, MONDAY)
+        day = self._day(MONDAY)
+        self.assertEqual(day.punch_count, 2)
+        self.assertEqual(day.last_punch_utc, utc(self.tuesday, 6))
+
+    def test_a_shift_started_before_the_window_takes_its_punches_with_it(self):
+        """Its own day is not being built, so neither of its punches may be counted
+        against a day that is. The direction `day_by_attendance` has to fail safely in."""
+        sunday = MONDAY - timedelta(days=1)
+        self._paired(utc(sunday, 22), utc(MONDAY, 6))
+        own = self._punch(utc(MONDAY, 9), "in", uid="own")
+        self._build(MONDAY, MONDAY)
+        day = self._day(MONDAY)
+        self.assertEqual(day.punch_count, 1)
+        self.assertEqual(day.first_punch_utc, own.punch_time_utc)
+
+    def test_the_punches_button_opens_the_same_set_it_counted(self):
+        """Or the row says three and the button shows two, and the number looks wrong
+        exactly where somebody went to find out whether it was."""
+        self._paired(utc(MONDAY, 22), utc(self.tuesday, 6))
+        self._build(MONDAY, self.tuesday)
+        day = self._day(MONDAY)
+        found = self.env["tipsoi.punch.log"].search(day.action_open_punches()["domain"])
+        self.assertEqual(len(found), day.punch_count)
+
+    def test_an_unpaired_punch_is_still_filed_under_its_own_date(self):
+        """Only a paired punch has a shift to belong to. Everything else keeps the rule
+        it had, or a single punch would have no day at all."""
+        self._punch(utc(self.tuesday, 9), "in")
+        self._build(MONDAY, self.tuesday)
+        self.assertFalse(self._day(MONDAY))
+        self.assertEqual(self._day(self.tuesday).punch_count, 1)
