@@ -698,6 +698,21 @@ class TestPunchTimes(DaySummaryCase):
         self.assertFalse(day.first_punch_utc)
         self.assertFalse(day.last_punch_utc)
 
+    def test_the_punches_button_finds_a_lone_punch(self):
+        """The click path for this ticket, so it gets its own assertion.
+
+        With no attendance the domain's first branch is `attendance_id in []`, which Odoo
+        resolves to false, leaving the unpaired branch to find the punch. Correct, and
+        entirely non-obvious -- worth a test rather than a reading of the domain.
+        """
+        self._punch(utc(MONDAY, 9, 3), "in")
+        self._build()
+        day = self._day()
+        self.assertFalse(day.attendance_ids)
+        found = self.env["tipsoi.punch.log"].search(day.action_open_punches()["domain"])
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found.punch_time_utc, utc(MONDAY, 9, 3))
+
     def test_a_corrected_punch_time_restates_the_row(self):
         """The guard on `_COMPARED`. A field left out of that tuple is a field the stored
         row silently never updates, and every existing idempotency test still passes --
