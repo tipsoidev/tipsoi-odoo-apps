@@ -19,6 +19,7 @@ open record, because one open record blocks every later one for that person.
 
 from datetime import datetime, timedelta
 
+from odoo.exceptions import ValidationError
 from odoo.tests import tagged
 
 from .common import Pages, TipsoiCase
@@ -498,6 +499,255 @@ class TestPunchPairing(TipsoiCase):
         ghost.invalidate_cache()
         self.assertEqual(ghost.state, "unmatched")
         self.assertFalse(ghost.attendance_id)
+
+
+@tagged("post_install", "-at_install")
+class TestPairingPhaseCascade(TipsoiCase):
+    """What one missing punch does to every day after it.
+
+    Where the feed carries no direction, pairing guesses by alternating. The guess is
+    only safe while the punch count stays even, so a single forgotten exit inverts the
+    phase -- and, before the restart below existed, inverted it *permanently*: every
+    following evening punch was read as an arrival and paired with the next morning's,
+    producing a phantom overnight shift a day at a time, for as long as the employee
+    kept punching. These are the tests that pin the recovery.
+
+    Every punch here is deliberately created with the default `direction="unknown"`.
+    That is the whole point: the declared-direction paths never reach this code, and a
+    fixture that declares its directions cannot express the bug.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.backend = self._backend("device_portal")
+        self.employee = self._employee("E-001", backend=self.backend, name="Rahim")
+        self.Punch = self.env["tipsoi.punch.log"]
+
+    def _punch(self, uid, moment, direction="unknown", state="matched"):
+        return self.Punch.create({
+            "backend_id": self.backend.id,
+            "tipsoi_log_id": uid,
+            "person_identifier": "E-001",
+            "employee_id": self.employee.id,
+            "punch_time_utc": moment,
+            "direction": direction,
+            "state": state,
+        })
+
+    def _pair(self, since=None):
+        with self._run(self.backend, "pairing") as run:
+            if since is None:
+                self.Punch._pair(self.backend, run)
+            else:
+                self.Punch._pair(self.backend, run, since=since)
+        return run
+
+    def _attendances(self):
+        return self.env["hr.attendance"].search(
+            [("employee_id", "=", self.employee.id)], order="check_in")
+
+    # -- the cascade ---------------------------------------------------------------------
+
+    def test_a_missing_exit_does_not_derail_the_following_day(self):
+        """Monday's lone entry must not eat Tuesday's arrival as a failed exit."""
+        self._punch("u1", datetime(2026, 8, 1, 3, 0))        # Mon 09:00 Dhaka, no exit
+        self._punch("u2", datetime(2026, 8, 2, 3, 0))        # Tue 09:00
+        self._punch("u3", datetime(2026, 8, 2, 12, 0))       # Tue 18:00
+        self._pair()
+
+        attendance = self._attendances()
+        self.assertEqual(len(attendance), 1, "Tuesday is a complete, ordinary day")
+        self.assertEqual(attendance.check_in, datetime(2026, 8, 2, 3, 0))
+        self.assertEqual(attendance.check_out, datetime(2026, 8, 2, 12, 0))
+
+    def test_the_forgotten_punch_itself_is_still_reported_unpaired(self):
+        """Recovering must not quietly swallow the evidence of the missing punch."""
+        orphan = self._punch("u1", datetime(2026, 8, 1, 3, 0))
+        self._punch("u2", datetime(2026, 8, 2, 3, 0))
+        self._punch("u3", datetime(2026, 8, 2, 12, 0))
+        self._pair()
+
+        orphan.invalidate_recordset()
+        self.assertEqual(orphan.state, "unpaired")
+        self.assertTrue(orphan.state_reason)
+
+    def test_no_phantom_overnight_shift_is_invented_across_three_days(self):
+        """The headline failure: an evening punch paired with the next morning's.
+
+        Before the restart this produced exactly one attendance, Tuesday 18:00 to
+        Wednesday 09:00 -- fifteen hours nobody worked -- and lost both real days.
+        """
+        self._punch("u1", datetime(2026, 8, 1, 3, 0))        # Mon 09:00, forgotten exit
+        self._punch("u2", datetime(2026, 8, 2, 3, 0))        # Tue 09:00
+        self._punch("u3", datetime(2026, 8, 2, 12, 0))       # Tue 18:00
+        self._punch("u4", datetime(2026, 8, 3, 3, 0))        # Wed 09:00
+        self._punch("u5", datetime(2026, 8, 3, 12, 0))       # Wed 18:00
+        self._pair()
+
+        attendance = self._attendances()
+        self.assertEqual(len(attendance), 2, "Tuesday and Wednesday, and nothing else")
+        for record in attendance:
+            self.assertEqual(
+                record.check_in.date(), record.check_out.date(),
+                "a day shift must never be paired across midnight")
+            self.assertEqual(record.check_out - record.check_in, timedelta(hours=9))
+
+    def test_the_recovery_holds_as_later_days_arrive_one_run_at_a_time(self):
+        """The cascade built up across runs, so recovery has to survive them too.
+
+        Ids are deliberately not asserted: a day whose shape changes has its attendance
+        replaced rather than amended, which `test_recomputing_an_unchanged_day_reuses_
+        the_same_attendance` pins for the case where nothing changed at all. What must
+        hold here is the shape -- two whole days, neither reaching across a midnight.
+        """
+        self._punch("u1", datetime(2026, 8, 1, 3, 0))        # the forgotten exit
+        self._punch("u2", datetime(2026, 8, 2, 3, 0))
+        self._punch("u3", datetime(2026, 8, 2, 12, 0))
+        self._pair()
+        self.assertEqual(len(self._attendances()), 1)
+
+        self._punch("u4", datetime(2026, 8, 3, 3, 0))
+        self._punch("u5", datetime(2026, 8, 3, 12, 0))
+        self._pair()
+
+        attendance = self._attendances()
+        self.assertEqual(len(attendance), 2)
+        self.assertEqual(
+            [(a.check_in, a.check_out) for a in attendance],
+            [(datetime(2026, 8, 2, 3, 0), datetime(2026, 8, 2, 12, 0)),
+             (datetime(2026, 8, 3, 3, 0), datetime(2026, 8, 3, 12, 0))])
+
+    def test_a_declared_exit_beyond_the_longest_shift_is_still_only_unpaired(self):
+        """The restart applies to a *guess*, never to what the device actually said.
+
+        A punch that declares itself an exit is evidence, and evidence that arrives too
+        late to close a shift is an unpaired exit -- not the start of a new one.
+        """
+        entry = self._punch("u1", datetime(2026, 8, 1, 3, 0), "in")
+        late = self._punch("u2", datetime(2026, 8, 1, 23, 0), "out")
+        self._pair()
+
+        self.assertEqual(len(self._attendances()), 0)
+        entry.invalidate_recordset()
+        late.invalidate_recordset()
+        self.assertEqual(entry.state, "unpaired")
+        self.assertEqual(late.state, "unpaired")
+
+    # -- the double punch ------------------------------------------------------------------
+
+    def test_the_duplicate_window_boundary_is_exclusive(self):
+        """Pinned because the advice to customers depends on it.
+
+        The comparison is `< window`, so a gap of exactly the configured window is *not*
+        collapsed. Telling somebody to set 300 for a punch repeated at five minutes is
+        off by one second and does nothing at all.
+        """
+        self.backend.pair_duplicate_seconds = 300
+        self._punch("u1", datetime(2026, 8, 1, 4, 0))        # 10:00 Dhaka
+        self._punch("u2", datetime(2026, 8, 1, 4, 5))        # 10:05 -- exactly 300s later
+        self._punch("u3", datetime(2026, 8, 1, 12, 0))       # 18:00, the real exit
+        self._pair()
+
+        attendance = self._attendances()
+        self.assertEqual(len(attendance), 1)
+        self.assertEqual(attendance.check_out, datetime(2026, 8, 1, 4, 5),
+                         "still read as a five-minute shift at exactly the boundary")
+
+    def test_a_double_punch_collapses_once_the_window_clears_it(self):
+        """And the real exit then closes the day, which is the point of the setting."""
+        self.backend.pair_duplicate_seconds = 360
+        self._punch("u1", datetime(2026, 8, 1, 4, 0))
+        repeat = self._punch("u2", datetime(2026, 8, 1, 4, 5))
+        self._punch("u3", datetime(2026, 8, 1, 12, 0))
+        self._pair()
+
+        repeat.invalidate_recordset()
+        self.assertEqual(repeat.state, "duplicate")
+        attendance = self._attendances()
+        self.assertEqual(len(attendance), 1)
+        self.assertEqual(attendance.check_in, datetime(2026, 8, 1, 4, 0))
+        self.assertEqual(attendance.check_out, datetime(2026, 8, 1, 12, 0))
+
+    # -- the configuration guard -------------------------------------------------------------
+
+    def test_a_shift_of_a_whole_day_is_refused_as_configuration(self):
+        """At 24 hours the restart cannot fire, so the next morning closes yesterday."""
+        with self.assertRaises(ValidationError):
+            self.backend.max_shift_hours = 24
+
+    def test_a_shift_length_below_an_hour_is_refused_too(self):
+        with self.assertRaises(ValidationError):
+            self.backend.max_shift_hours = 0
+
+    def test_a_legacy_day_long_setting_is_clamped_rather_than_obeyed(self):
+        """`@api.constrains` does not re-validate on upgrade, so a stored 24 survives.
+
+        Written straight to the column to reproduce exactly that: a value the constraint
+        would refuse today, sitting in a database from before it existed.
+        """
+        self.env.cr.execute(
+            "UPDATE tipsoi_backend SET max_shift_hours = 48 WHERE id = %s",
+            (self.backend.id,))
+        self.backend.invalidate_recordset()
+
+        self._punch("u1", datetime(2026, 8, 1, 3, 0))        # Mon 09:00
+        self._punch("u2", datetime(2026, 8, 2, 3, 0))        # Tue 09:00
+        self._pair()
+
+        self.assertEqual(len(self._attendances()), 0,
+                         "24 hours apart is two days, not one shift, whatever is stored")
+
+    # -- repairing history ---------------------------------------------------------------
+
+    def test_an_ordinary_run_leaves_settled_punches_alone(self):
+        """The guarantee that keeps a five-minute cron cheap."""
+        self._punch("u1", datetime(2026, 8, 1, 3, 0))
+        self._punch("u2", datetime(2026, 8, 1, 12, 0))
+        self._pair()
+        settled = self._attendances()
+        self.assertEqual(len(settled), 1)
+
+        run = self._pair()
+        self.assertEqual(run.fetched, 0, "nothing was pending, so nothing was read")
+        self.assertEqual(self._attendances().ids, settled.ids)
+
+    def test_a_windowed_run_reaches_punches_that_have_already_paired(self):
+        """The repair path: settled rows are invisible to an ordinary run.
+
+        After a cascade the damaged punches are `paired` and `unpaired`, neither of which
+        `_pair` selects -- so the corrected code would never look at them again and the
+        phantom records would stay in the database forever. A window overrides the state
+        filter, which is what Manual Sync uses to restate history.
+        """
+        entry = self._punch("u1", datetime(2026, 8, 1, 3, 0))
+        exit_ = self._punch("u2", datetime(2026, 8, 1, 12, 0))
+        self._pair()
+        self.assertEqual(len(self._attendances()), 1)
+
+        # Break the pair the way a corrected upstream time would, but leave the states
+        # settled -- exactly the shape an ordinary run cannot see.
+        exit_.punch_time_utc = datetime(2026, 8, 1, 13, 0)
+        entry.invalidate_recordset()
+        self.assertEqual(exit_.state, "paired")
+
+        self._pair()
+        self.assertEqual(self._attendances().check_out, datetime(2026, 8, 1, 12, 0),
+                         "an ordinary run does not revisit a settled punch")
+
+        self._pair(since=datetime(2026, 8, 1, 0, 0))
+        self.assertEqual(self._attendances().check_out, datetime(2026, 8, 1, 13, 0))
+
+    def test_a_windowed_run_stops_at_the_window(self):
+        """Otherwise 'repair last week' quietly re-pairs the whole database."""
+        self._punch("u1", datetime(2026, 7, 1, 3, 0))
+        self._punch("u2", datetime(2026, 7, 1, 12, 0))
+        self._punch("u3", datetime(2026, 8, 1, 3, 0))
+        self._punch("u4", datetime(2026, 8, 1, 12, 0))
+        self._pair()
+        self.assertEqual(len(self._attendances()), 2)
+
+        run = self._pair(since=datetime(2026, 8, 1, 0, 0))
+        self.assertEqual(run.fetched, 2, "only August's two punches were read")
 
 
 @tagged("post_install", "-at_install")

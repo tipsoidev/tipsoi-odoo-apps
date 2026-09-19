@@ -25,6 +25,14 @@ _logger = logging.getLogger(__name__)
 # wire does not die halfway.
 TOKEN_SKEW = timedelta(minutes=5)
 
+#: Bounds on `max_shift_hours`. The ceiling is the interesting one and it is one hour
+#: short of a day on purpose: pairing closes a check-in with the next punch that falls
+#: inside this window, so at 24 hours tomorrow morning's arrival closes today's shift and
+#: the day it belonged to vanishes. There is no shift length at or above a day that a
+#: punch feed can express unambiguously.
+MIN_SHIFT_HOURS = 1
+MAX_SHIFT_HOURS = 23
+
 
 class TipsoiBackend(models.Model):
     _name = "tipsoi.backend"
@@ -175,13 +183,22 @@ class TipsoiBackend(models.Model):
     pair_duplicate_seconds = fields.Integer(
         default=60, string="Collapse duplicates within (s)",
         help="Device Portal mode. Two reads of the same person this close together are "
-             "one punch -- a second finger press, not an exit.")
+             "one punch -- a second finger press, not an exit.\n\n"
+             "This is also the lever for a genuine double punch, not only for a repeated "
+             "read: where the feed carries no direction, pairing has to guess by "
+             "alternating, so somebody who taps at 10:00 and again at 10:05 gets a "
+             "five-minute shift and their real exit is orphaned. Raising this to just "
+             "over the gap fixes that -- and note the comparison is strict, so 300 does "
+             "*not* collapse a punch repeated at exactly five minutes. Use 360. The "
+             "cost is that a real step-out shorter than this is absorbed too, which for "
+             "attendance is almost always what you want.")
     max_shift_hours = fields.Integer(
         default=16, string="Longest shift (hours)",
         help="Device Portal mode. How far after a check-in an exit punch can still "
              "close that shift. This is what makes an overnight shift pair correctly "
              "instead of splitting at midnight, so it must exceed the longest real "
-             "shift and stay under the gap to the next one.")
+             "shift and stay under the gap to the next one. Capped below a full day: at "
+             "24 hours the next morning's arrival would close yesterday's shift.")
 
     # -- cursors -----------------------------------------------------------------------
     last_log_sync_time = fields.Datetime(
@@ -249,8 +266,11 @@ class TipsoiBackend(models.Model):
             # Portal customer's day view look permanently empty.
             backend.day_count = self.env[backend._day_model()].search_count(
                 [("backend_id", "=", backend.id)])
-            backend.employee_count = self.env["hr.employee"].with_context(
-                active_test=False).search_count([("tipsoi_backend_id", "=", backend.id)])
+            # Current staff only, and the list this opens matches. Counting leavers here
+            # while the roster is what people read the badge as gave a client a headline
+            # number 148 higher than the people they employ.
+            backend.employee_count = self.env["hr.employee"].search_count(
+                [("tipsoi_backend_id", "=", backend.id)])
             backend.pending_photo_count = self.env["hr.employee"].with_context(
                 active_test=False).search_count([
                     ("tipsoi_backend_id", "=", backend.id),
@@ -279,13 +299,33 @@ class TipsoiBackend(models.Model):
     # validation
     # ----------------------------------------------------------------------------------
 
-    @api.constrains("page_size", "poll_overlap_minutes")
+    @api.constrains("page_size", "poll_overlap_minutes", "max_shift_hours")
     def _check_limits(self):
         for backend in self:
             if backend.page_size < 1:
                 raise ValidationError(_("Page size must be at least 1."))
             if backend.poll_overlap_minutes < 0:
                 raise ValidationError(_("Poll overlap cannot be negative."))
+            if not MIN_SHIFT_HOURS <= backend.max_shift_hours <= MAX_SHIFT_HOURS:
+                raise ValidationError(_(
+                    "Longest shift must be between %(low)s and %(high)s hours.\n\n"
+                    "A day or more cannot be a shift length here. Pairing closes a "
+                    "check-in with the next punch that falls inside this window, so at "
+                    "24 hours the following morning's arrival closes yesterday's shift "
+                    "and the day it belonged to disappears. Set this above the longest "
+                    "real shift and below the gap to the next one.",
+                    low=MIN_SHIFT_HOURS, high=MAX_SHIFT_HOURS))
+
+    def _pairing_span_hours(self):
+        """How far pairing may reach, clamped whatever the column happens to hold.
+
+        The constraint above refuses a bad value on save, but `@api.constrains` does not
+        re-validate on upgrade -- so a site that stored 24 before it existed keeps it
+        until somebody opens the form. This is what protects them in the meantime, and it
+        is why the clamp lives at the point of use rather than only on the field.
+        """
+        self.ensure_one()
+        return min(max(self.max_shift_hours, MIN_SHIFT_HOURS), MAX_SHIFT_HOURS)
 
     # ----------------------------------------------------------------------------------
     # token helpers
@@ -456,24 +496,33 @@ class TipsoiBackend(models.Model):
                           [("backend_id", "=", self.id)], view_mode="kanban,list,form")
 
     def action_open_employees(self):
+        # Current staff only. This used to force active_test off, on the reasoning that
+        # somebody opening the count is looking for departed people -- but the button is
+        # read as a roster, so on a site with years of leavers it opened a list nobody
+        # recognised. Odoo's own Archived filter is one click away in the search panel
+        # for the times that reasoning does hold.
         return self._open(
             _("Synced employees"), "hr.employee",
-            [("tipsoi_backend_id", "=", self.id)],
-            # Departed employees are archived, and they are exactly the ones somebody
-            # opening this count is likely to be looking for.
-            context={"active_test": False})
+            [("tipsoi_backend_id", "=", self.id)])
 
     def action_open_punches(self):
+        # Same as action_open_days. Unmatched punches survive the filter -- it spares
+        # rows with no employee at all -- so the repair path is unaffected.
         return self._open(_("Punch logs"), "tipsoi.punch.log",
-                          [("backend_id", "=", self.id)])
+                          [("backend_id", "=", self.id)],
+                          context={"search_default_hide_former": 1})
 
     def action_open_unmatched_punches(self):
         return self._open(_("Unmatched punches"), "tipsoi.punch.log",
                           [("backend_id", "=", self.id), ("state", "=", "unmatched")])
 
     def action_open_days(self):
+        # The default filter has to be repeated here: this action is built in Python, so
+        # the context on the XML action of the same screen never reaches it, and without
+        # this the stat button is the one way in that still shows leavers.
         return self._open(_("Daily attendance"), self._day_model(),
-                          [("backend_id", "=", self.id)])
+                          [("backend_id", "=", self.id)],
+                          context={"search_default_hide_former": 1})
 
     @api.model
     def action_daily_attendance(self):
@@ -722,7 +771,14 @@ class TipsoiBackend(models.Model):
             if backend.sync_attendance:
                 backend.action_pair_punches()
 
-    def action_pair_punches(self):
+    def action_pair_punches(self, window_from=None):
+        """Pair what is waiting, or -- given a start -- re-pair a range outright.
+
+        The plain call is what the cron runs and touches only punches in a pending
+        state. `window_from` is the repair path: after a pairing bug, the wrong records
+        are the ones already written, and their punches have long since settled out of
+        the pending set. See `tipsoi.punch.log._pair`.
+        """
         for backend in self:
             if backend.backend_type != "device_portal":
                 raise UserError(_(
@@ -730,8 +786,9 @@ class TipsoiBackend(models.Model):
                     "already paired each day."))
             backend._run(
                 "pairing",
-                lambda b, run: self.env["tipsoi.punch.log"]._pair(b, run),
-                mode="device_portal")
+                lambda b, run, f=window_from: self.env["tipsoi.punch.log"]._pair(
+                    b, run, since=f),
+                mode="device_portal", window_from=window_from)
         return True
 
     @api.model

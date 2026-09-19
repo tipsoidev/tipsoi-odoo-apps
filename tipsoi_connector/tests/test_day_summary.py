@@ -802,3 +802,195 @@ class TestOvernightPunchBucketing(DaySummaryCase):
         self._build(MONDAY, self.tuesday)
         self.assertFalse(self._day(MONDAY))
         self.assertEqual(self._day(self.tuesday).punch_count, 1)
+
+
+@tagged("post_install", "-at_install")
+class TestTheCheckInColumn(DaySummaryCase):
+    """What the day shows as an arrival while it is still running.
+
+    A check-in only becomes a check-in once its exit punch arrives, because pairing is
+    what writes `hr.attendance`. So for the whole of a working day the paired field is
+    empty and, read as a dashboard, everybody who has turned up looks absent. That is the
+    complaint these pin -- and the reason the fix is a second field rather than a wider
+    first one: the paired value is what lateness is judged on.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.backend.generate_absences = True      # so punctuality is judged at all
+
+    def test_a_lone_punch_is_shown_as_the_arrival(self):
+        self._punch(utc(MONDAY, 9, 3), "in")
+        self._build()
+        day = self._day()
+        self.assertEqual(day.check_in_display, utc(MONDAY, 9, 3))
+        self.assertFalse(day.check_in_utc, "nothing paired, so nothing is claimed paired")
+        self.assertFalse(day.check_out_utc)
+        self.assertEqual(day.day_type, "partial")
+
+    def test_a_paired_day_shows_the_paired_check_in(self):
+        """Not the first punch, where the two disagree -- the pair is the better answer."""
+        self._paired(utc(MONDAY, 8), utc(MONDAY, 17))
+        self._build()
+        day = self._day()
+        self.assertEqual(day.check_in_display, day.check_in_utc)
+        self.assertEqual(day.check_in_display, utc(MONDAY, 8))
+
+    def test_lateness_is_still_judged_on_the_paired_check_in_alone(self):
+        """The whole reason this is a separate field.
+
+        A lone punch an hour after the calendar start must not make somebody late: their
+        day has not been paired yet, and lateness is a judgement, not a reading.
+        """
+        self._punch(utc(MONDAY, 9, 3), "in")
+        self._build()
+        day = self._day()
+        self.assertEqual(day.check_in_display, utc(MONDAY, 9, 3))
+        self.assertFalse(day.is_late)
+        self.assertEqual(day.late_minutes, 0)
+
+    def test_the_same_arrival_is_late_once_it_has_paired(self):
+        """The control for the test above: 09:03 is genuinely late against an 08:00 start,
+        so the absence of lateness there has to be about pairing and nothing else."""
+        self._paired(utc(MONDAY, 9, 3), utc(MONDAY, 17))
+        self._build()
+        day = self._day()
+        self.assertTrue(day.is_late)
+        self.assertEqual(day.late_minutes, 63)
+
+    def test_an_absent_day_has_no_arrival_to_show(self):
+        """The absence branch returns an explicit dict, and a compute over its fields has
+        to survive that -- it is the least-travelled path in the build.
+
+        The punch a fortnight back is the absence floor, not part of what is under test:
+        nobody is absent before the first day a device ever saw them.
+        """
+        self._punch(utc(MONDAY - timedelta(days=14), 8), "in", uid="floor")
+        self._build()
+        day = self._day()
+        self.assertEqual(day.day_type, "absent")
+        self.assertFalse(day.check_in_display)
+
+    def test_the_column_follows_a_corrected_punch(self):
+        """Stored, so it has to be recomputed rather than merely computed once."""
+        punch = self._punch(utc(MONDAY, 9, 3), "in")
+        self._build()
+        self.assertEqual(self._day().check_in_display, utc(MONDAY, 9, 3))
+
+        punch.punch_time_utc = utc(MONDAY, 8, 3)
+        punch.flush_recordset()
+        self._build()
+        self.assertEqual(self._day().check_in_display, utc(MONDAY, 8, 3))
+
+
+@tagged("post_install", "-at_install")
+class TestFormerEmployeesAreHiddenNotDropped(DaySummaryCase):
+    """Leavers stay in the data and leave the default view.
+
+    Their history is real and has to keep rebuilding -- `TestDepartedEmployees` pins that
+    -- so the filtering belongs on the screen and not in `_build`. What went wrong for a
+    client is that none of these models has an `active` field, so Odoo could not hide the
+    rows even in principle and years of leavers sat in every list.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.leaver = self._employee("E-002", backend=self.backend, name="Karim")
+        self.leaver.with_context(tipsoi_syncing=True).write({"active": False})
+        self.assertFalse(self.leaver.active)
+
+    def _hide_former(self, xml_id):
+        """The filter's domain as the view actually declares it.
+
+        Read out of the view rather than restated here. A filter that quietly stopped
+        matching -- renamed, or its domain edited -- would otherwise leave every
+        assertion in this class passing against a literal nothing uses.
+        """
+        from lxml import etree
+        from odoo.tools.safe_eval import safe_eval
+        arch = etree.fromstring(self.env.ref(xml_id).arch)
+        nodes = arch.xpath("//filter[@name='hide_former']")
+        self.assertTrue(nodes, "%s no longer declares a hide_former filter" % xml_id)
+        return safe_eval(nodes[0].get("domain"))
+
+    # -- the day view --------------------------------------------------------------------
+
+    def test_the_filter_hides_a_leavers_day_and_keeps_a_current_ones(self):
+        self._attendance(utc(MONDAY, 8), utc(MONDAY, 17))
+        self._attendance(utc(MONDAY, 8), utc(MONDAY, 17), employee=self.leaver)
+        self._build()
+
+        domain = self._hide_former(
+            "tipsoi_connector.view_tipsoi_day_summary_search")
+        shown = self.env["tipsoi.day.summary"].search(
+            [("backend_id", "=", self.backend.id)] + domain)
+        self.assertEqual(shown.employee_id, self.employee)
+
+    def test_the_leavers_day_is_still_there_to_be_found(self):
+        """Hidden by a filter somebody can remove, not dropped from the build."""
+        self._attendance(utc(MONDAY, 8), utc(MONDAY, 17), employee=self.leaver)
+        self._build()
+        rows = self._days().filtered(lambda r: r.employee_id == self.leaver)
+        self.assertEqual(len(rows), 1)
+        self.assertAlmostEqual(rows.worked_hours, 9.0, places=2)
+
+    def test_the_daily_attendance_screen_switches_the_filter_on(self):
+        action = self.env.ref("tipsoi_connector.action_tipsoi_day_summary")
+        self.assertIn("search_default_hide_former", action.context or "")
+
+    # -- the punch view ------------------------------------------------------------------
+
+    def test_a_punch_with_no_employee_at_all_survives_the_filter(self):
+        """The half of the domain that is easy to drop and expensive to lose.
+
+        An unmatched punch has nobody to be current or former. Without the employee_id
+        = False clause the default filter would hide exactly the rows the Unmatched
+        Punches screen exists to repair, and the repair path would look empty.
+        """
+        ghost = self.env["tipsoi.punch.log"].create({
+            "backend_id": self.backend.id,
+            "tipsoi_log_id": "ghost-1",
+            "person_identifier": "NOBODY",
+            "punch_time_utc": utc(MONDAY, 9),
+            "state": "unmatched",
+        })
+        self._punch(utc(MONDAY, 9), "in", employee=self.leaver, uid="leaver-1")
+
+        domain = self._hide_former("tipsoi_connector.view_tipsoi_punch_log_search")
+        shown = self.env["tipsoi.punch.log"].search(
+            [("backend_id", "=", self.backend.id)] + domain)
+        self.assertIn(ghost, shown)
+        self.assertFalse(shown.filtered(lambda p: p.employee_id == self.leaver))
+
+    def test_the_hrm_day_view_declares_the_same_filter(self):
+        """Both pipelines show days; a client should not have to know which one they are
+        on to stop seeing people who left."""
+        self._hide_former("tipsoi_connector.view_tipsoi_day_attendance_search")
+
+    # -- the backend's own buttons ----------------------------------------------------------
+
+    def test_the_backend_stat_buttons_carry_the_filter_too(self):
+        """They build their own action in Python, so the XML context never reaches them --
+        which made them the one way in that still showed leavers."""
+        for action in (self.backend.action_open_days(),
+                       self.backend.action_open_punches()):
+            self.assertEqual(action["context"].get("search_default_hide_former"), 1)
+
+    def test_the_employee_button_no_longer_forces_archived_rows_in(self):
+        action = self.backend.action_open_employees()
+        self.assertNotIn("active_test", action["context"])
+
+    def test_the_employee_badge_counts_what_its_list_will_show(self):
+        """A count of everyone who ever worked here, under a button labelled Employees,
+        is read as a headcount -- and was 148 too high."""
+        self.backend.invalidate_recordset()
+        self.assertEqual(self.backend.employee_count, 1)
+
+    def test_the_photo_queue_still_reaches_someone_who_has_left(self):
+        """Left alone deliberately: a queue of outstanding work is not a roster, and a
+        departing employee's photo still has to finish being pushed."""
+        self.leaver.tipsoi_photo_state = "pending"
+        self.backend.invalidate_recordset()
+        self.assertEqual(self.backend.pending_photo_count, 1)
+        self.assertIs(
+            self.backend.action_open_pending_photos()["context"]["active_test"], False)
