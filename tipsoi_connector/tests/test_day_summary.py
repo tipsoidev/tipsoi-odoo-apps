@@ -878,7 +878,7 @@ class TestTheCheckInColumn(DaySummaryCase):
         self.assertEqual(self._day().check_in_display, utc(MONDAY, 9, 3))
 
         punch.punch_time_utc = utc(MONDAY, 8, 3)
-        punch.flush_recordset()
+        punch.flush()
         self._build()
         self.assertEqual(self._day().check_in_display, utc(MONDAY, 8, 3))
 
@@ -983,14 +983,14 @@ class TestFormerEmployeesAreHiddenNotDropped(DaySummaryCase):
     def test_the_employee_badge_counts_what_its_list_will_show(self):
         """A count of everyone who ever worked here, under a button labelled Employees,
         is read as a headcount -- and was 148 too high."""
-        self.backend.invalidate_recordset()
+        self.backend.invalidate_cache()
         self.assertEqual(self.backend.employee_count, 1)
 
     def test_the_photo_queue_still_reaches_someone_who_has_left(self):
         """Left alone deliberately: a queue of outstanding work is not a roster, and a
         departing employee's photo still has to finish being pushed."""
         self.leaver.tipsoi_photo_state = "pending"
-        self.backend.invalidate_recordset()
+        self.backend.invalidate_cache()
         self.assertEqual(self.backend.pending_photo_count, 1)
         self.assertIs(
             self.backend.action_open_pending_photos()["context"]["active_test"], False)

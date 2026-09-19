@@ -567,7 +567,7 @@ class TestPairingPhaseCascade(TipsoiCase):
         self._punch("u3", datetime(2026, 8, 2, 12, 0))
         self._pair()
 
-        orphan.invalidate_recordset()
+        orphan.invalidate_cache()
         self.assertEqual(orphan.state, "unpaired")
         self.assertTrue(orphan.state_reason)
 
@@ -628,8 +628,8 @@ class TestPairingPhaseCascade(TipsoiCase):
         self._pair()
 
         self.assertEqual(len(self._attendances()), 0)
-        entry.invalidate_recordset()
-        late.invalidate_recordset()
+        entry.invalidate_cache()
+        late.invalidate_cache()
         self.assertEqual(entry.state, "unpaired")
         self.assertEqual(late.state, "unpaired")
 
@@ -661,7 +661,7 @@ class TestPairingPhaseCascade(TipsoiCase):
         self._punch("u3", datetime(2026, 8, 1, 12, 0))
         self._pair()
 
-        repeat.invalidate_recordset()
+        repeat.invalidate_cache()
         self.assertEqual(repeat.state, "duplicate")
         attendance = self._attendances()
         self.assertEqual(len(attendance), 1)
@@ -688,7 +688,7 @@ class TestPairingPhaseCascade(TipsoiCase):
         self.env.cr.execute(
             "UPDATE tipsoi_backend SET max_shift_hours = 48 WHERE id = %s",
             (self.backend.id,))
-        self.backend.invalidate_recordset()
+        self.backend.invalidate_cache()
 
         self._punch("u1", datetime(2026, 8, 1, 3, 0))        # Mon 09:00
         self._punch("u2", datetime(2026, 8, 2, 3, 0))        # Tue 09:00
@@ -727,7 +727,7 @@ class TestPairingPhaseCascade(TipsoiCase):
         # Break the pair the way a corrected upstream time would, but leave the states
         # settled -- exactly the shape an ordinary run cannot see.
         exit_.punch_time_utc = datetime(2026, 8, 1, 13, 0)
-        entry.invalidate_recordset()
+        entry.invalidate_cache()
         self.assertEqual(exit_.state, "paired")
 
         self._pair()
