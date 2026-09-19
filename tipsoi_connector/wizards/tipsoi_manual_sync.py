@@ -57,7 +57,13 @@ JOB_ACTIONS = {
 #: The day build belongs here for the same reason a backfill does: its own window is a
 #: rolling few days, so without an explicit range there is no way to restate history --
 #: and restating history is exactly what a backfill is for.
-WINDOWED_JOBS = ("punches", "attendance", "days")
+#:
+#: Pairing belongs here for a sharper reason. Its ordinary run reads only punches in a
+#: pending state, so once a punch has settled -- paired, or unpaired -- no later run ever
+#: revisits it. Fixing the pairing rules therefore does nothing whatsoever for the records
+#: the old rules already wrote, and those are the ones being complained about. A window is
+#: the only way to reach them. It uses the start date only; see `_run_window`.
+WINDOWED_JOBS = ("punches", "attendance", "days", "pairing")
 
 
 class TipsoiManualSync(models.TransientModel):
@@ -90,9 +96,14 @@ class TipsoiManualSync(models.TransientModel):
 
     date_from = fields.Datetime(
         string="From",
-        help="Punch poll, attendance and day build only. Leave both dates empty to use "
-             "the backend's own window. On the day build this is how history is "
-             "restated: the rolling window only reaches back a few days.")
+        help="Punch poll, attendance, day build and pairing only. Leave both dates empty "
+             "to use the backend's own window. On the day build this is how history is "
+             "restated: the rolling window only reaches back a few days.\n\n"
+             "On pairing it is how already-paired days are re-derived after a fix, which "
+             "an ordinary pairing run cannot do -- it reads only punches still waiting. "
+             "Pairing uses the start date and ignores the end, because a shift that "
+             "begins inside the window and finishes after it still has to pair; an end "
+             "bound would cut it in half. Give an end anyway, for the shared rule below.")
     date_to = fields.Datetime(string="To")
 
     mode_warning = fields.Char(compute="_compute_mode_warning")
@@ -170,7 +181,13 @@ class TipsoiManualSync(models.TransientModel):
         """
         self.ensure_one()
         start, end = self.date_from, self.date_to
-        if self.job == "punches":
+        if self.job == "pairing":
+            # Start only, deliberately. Pairing reaches forward past any end -- that is
+            # how a shift beginning inside the window and finishing outside it stays one
+            # span -- so honouring `end` would split exactly the pairs this exists to
+            # repair. `window_to` is still recorded on the run as what was asked for.
+            backend.action_pair_punches(window_from=start)
+        elif self.job == "punches":
             backend._run(
                 "punches",
                 lambda b, run: self.env["tipsoi.punch.log"]._poll(b, run, start, end),

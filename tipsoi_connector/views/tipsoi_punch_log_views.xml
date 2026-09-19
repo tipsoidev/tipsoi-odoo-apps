@@ -133,6 +133,14 @@
         <field name="device_identifier"/>
         <field name="rfid"/>
         <field name="backend_id"/>
+        <!--
+          The employee_id = False half is load-bearing: an unmatched punch has nobody to
+          be current or former, and without it this filter would hide exactly the rows
+          the Unmatched Punches screen exists to repair.
+        -->
+        <filter name="hide_former" string="Hide former employees"
+                domain="['|', ('employee_id','=',False), ('employee_id.active','=',True)]"/>
+        <separator/>
         <filter name="state_unmatched" string="No employee"
                 domain="[('state','=','unmatched')]"/>
         <filter name="state_unpaired" string="Unpaired"
@@ -168,6 +176,7 @@
     <field name="res_model">tipsoi.punch.log</field>
     <field name="view_mode">tree,form</field>
     <field name="search_view_id" ref="view_tipsoi_punch_log_search"/>
+    <field name="context">{'search_default_hide_former': 1}</field>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No punches yet</p>
       <p>Punches arrive from the Device Portal. Open the backend and press Poll Punches,
