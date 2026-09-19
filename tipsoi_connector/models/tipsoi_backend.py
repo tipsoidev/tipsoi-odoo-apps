@@ -199,13 +199,6 @@ class TipsoiBackend(models.Model):
              "instead of splitting at midnight, so it must exceed the longest real "
              "shift and stay under the gap to the next one. Capped below a full day: at "
              "24 hours the next morning's arrival would close yesterday's shift.")
-    max_shift_hours = fields.Integer(
-        default=16, string="Longest shift (hours)",
-        help="Device Portal mode. How far after a check-in an exit punch can still "
-             "close that shift. This is what makes an overnight shift pair correctly "
-             "instead of splitting at midnight, so it must exceed the longest real "
-             "shift and stay under the gap to the next one. Capped below a full day: at "
-             "24 hours the next morning's arrival would close yesterday's shift.")
 
     # -- cursors -----------------------------------------------------------------------
     last_log_sync_time = fields.Datetime(
@@ -273,8 +266,11 @@ class TipsoiBackend(models.Model):
             # Portal customer's day view look permanently empty.
             backend.day_count = self.env[backend._day_model()].search_count(
                 [("backend_id", "=", backend.id)])
-            backend.employee_count = self.env["hr.employee"].with_context(
-                active_test=False).search_count([("tipsoi_backend_id", "=", backend.id)])
+            # Current staff only, and the list this opens matches. Counting leavers here
+            # while the roster is what people read the badge as gave a client a headline
+            # number 148 higher than the people they employ.
+            backend.employee_count = self.env["hr.employee"].search_count(
+                [("tipsoi_backend_id", "=", backend.id)])
             backend.pending_photo_count = self.env["hr.employee"].with_context(
                 active_test=False).search_count([
                     ("tipsoi_backend_id", "=", backend.id),
@@ -500,24 +496,33 @@ class TipsoiBackend(models.Model):
                           [("backend_id", "=", self.id)], view_mode="kanban,list,form")
 
     def action_open_employees(self):
+        # Current staff only. This used to force active_test off, on the reasoning that
+        # somebody opening the count is looking for departed people -- but the button is
+        # read as a roster, so on a site with years of leavers it opened a list nobody
+        # recognised. Odoo's own Archived filter is one click away in the search panel
+        # for the times that reasoning does hold.
         return self._open(
             _("Synced employees"), "hr.employee",
-            [("tipsoi_backend_id", "=", self.id)],
-            # Departed employees are archived, and they are exactly the ones somebody
-            # opening this count is likely to be looking for.
-            context={"active_test": False})
+            [("tipsoi_backend_id", "=", self.id)])
 
     def action_open_punches(self):
+        # Same as action_open_days. Unmatched punches survive the filter -- it spares
+        # rows with no employee at all -- so the repair path is unaffected.
         return self._open(_("Punch logs"), "tipsoi.punch.log",
-                          [("backend_id", "=", self.id)])
+                          [("backend_id", "=", self.id)],
+                          context={"search_default_hide_former": 1})
 
     def action_open_unmatched_punches(self):
         return self._open(_("Unmatched punches"), "tipsoi.punch.log",
                           [("backend_id", "=", self.id), ("state", "=", "unmatched")])
 
     def action_open_days(self):
+        # The default filter has to be repeated here: this action is built in Python, so
+        # the context on the XML action of the same screen never reaches it, and without
+        # this the stat button is the one way in that still shows leavers.
         return self._open(_("Daily attendance"), self._day_model(),
-                          [("backend_id", "=", self.id)])
+                          [("backend_id", "=", self.id)],
+                          context={"search_default_hide_former": 1})
 
     @api.model
     def action_daily_attendance(self):
