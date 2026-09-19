@@ -157,6 +157,9 @@
         <field name="employee_identifier"/>
         <field name="day_date"/>
         <field name="backend_id"/>
+        <filter name="hide_former" string="Hide former employees"
+                domain="['|', ('employee_id','=',False), ('employee_id.active','=',True)]"/>
+        <separator/>
         <filter name="state_new" string="Not imported" domain="[('state','=','new')]"/>
         <filter name="state_imported" string="Imported"
                 domain="[('state','=','imported')]"/>
@@ -191,6 +194,7 @@
     <field name="res_model">tipsoi.day.attendance</field>
     <field name="view_mode">list,form</field>
     <field name="search_view_id" ref="view_tipsoi_day_attendance_search"/>
+    <field name="context">{'search_default_hide_former': 1}</field>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No days yet</p>
       <p>On a Tipsoi app (HRM) backend, days come from the app already summarised per

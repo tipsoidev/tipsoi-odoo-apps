@@ -80,6 +80,19 @@ class TipsoiDaySummary(models.Model):
         help="The latest raw punch belonging to this day. Equal to the first punch when "
              "the device recorded only one.")
 
+    check_in_display = fields.Datetime(
+        compute="_compute_check_in_display", store=True, readonly=True,
+        string="Check in",
+        help="What this day shows as an arrival: the paired check-in where pairing "
+             "produced one, and the day's first raw punch where it has not. This is the "
+             "column to read on a day that is still running -- a check-in only becomes a "
+             "check-in once its exit punch arrives, so until then the paired field is "
+             "empty and the person looks absent.\n\n"
+             "Deliberately a second field rather than a wider Check in. The paired value "
+             "is what lateness is judged on, and folding an unpaired punch into it would "
+             "move somebody's lateness as a side effect of a display change rather than "
+             "as a decision somebody made.")
+
     worked_hours = fields.Float(
         readonly=True, string="Worked",
         help="The day's attendance hours added up, so a break between two pairs is "
@@ -139,6 +152,18 @@ class TipsoiDaySummary(models.Model):
     # ----------------------------------------------------------------------------------
     # display
     # ----------------------------------------------------------------------------------
+
+    @api.depends("check_in_utc", "first_punch_utc")
+    def _compute_check_in_display(self):
+        """Deliberately absent from `_COMPARED`.
+
+        `_unchanged` indexes `vals[field]` for every name there, and this one never
+        appears in `vals` -- it is derived by the ORM from two fields that do. Listing it
+        would raise a `KeyError` on the absence path, which is the least-travelled branch
+        in the build and so the last place anybody would find it.
+        """
+        for row in self:
+            row.check_in_display = row.check_in_utc or row.first_punch_utc
 
     @api.depends("employee_id", "day_date")
     def _compute_name(self):

@@ -340,18 +340,32 @@ class TipsoiPunchLog(models.Model):
     # ----------------------------------------------------------------------------------
 
     @api.model
-    def _pair(self, backend, run):
+    def _pair(self, backend, run, since=None):
         """Pair every employee that has punches waiting.
 
         Employees with nothing new are skipped entirely, so a five-minute cron over a
         quiet office does no writes at all.
+
+        `since` overrides that, and it is the repair path rather than a nicety. An
+        ordinary run reads only punches in a pending state, so a row that has already
+        settled -- `paired`, or `unpaired` -- is never looked at again, however wrong it
+        turned out to be. That is right for a cron and useless after a bug: correcting
+        the pairing rules does nothing at all for the records the old rules already
+        wrote, and those records are the ones somebody is complaining about. Given a
+        moment, this reads every punch from it onward whatever state it is in and
+        re-derives the days. `_pair_employee` still writes nothing where nothing changed,
+        so a rebuild over a range that was already correct costs reads and no more.
         """
-        pending = self.search([
+        domain = [
             ("backend_id", "=", backend.id),
-            ("state", "in", ("new", "matched", "error")),
             ("employee_id", "!=", False),
             ("punch_time_utc", "!=", False),
-        ], order="punch_time_utc asc")
+        ]
+        if since is None:
+            domain.append(("state", "in", ("new", "matched", "error")))
+        else:
+            domain.append(("punch_time_utc", ">=", since))
+        pending = self.search(domain, order="punch_time_utc asc")
 
         earliest = {}
         for punch in pending:
@@ -366,7 +380,11 @@ class TipsoiPunchLog(models.Model):
     @api.model
     def _pair_employee(self, backend, employee, since, counters):
         """Recompute one employee's pairs over the window around `since`."""
-        span = timedelta(hours=max(backend.max_shift_hours, 1))
+        # Clamped through the backend rather than read raw. `@api.constrains` does not
+        # re-validate on upgrade, so a site that stored a day-long shift before that
+        # constraint existed still has one -- and at 24 hours the next morning's arrival
+        # closes yesterday's shift, which is the exact failure the constraint prevents.
+        span = timedelta(hours=backend._pairing_span_hours())
         rows = self._pairing_window(backend, employee, since, span)
         if not rows:
             return
@@ -447,7 +465,10 @@ class TipsoiPunchLog(models.Model):
         open_entry = None
         expected = "in"
         for punch in kept:
-            direction = punch.direction if punch.direction in ("in", "out") else expected
+            # Whether the direction is evidence or a guess decides what happens when the
+            # guess turns out to be impossible, below. The two are not interchangeable.
+            declared = punch.direction if punch.direction in ("in", "out") else None
+            direction = declared or expected
             if direction == "in":
                 if open_entry is not None:
                     plan[open_entry] = ("unpaired", _(
@@ -465,6 +486,23 @@ class TipsoiPunchLog(models.Model):
                 plan[open_entry] = ("unpaired", _(
                     "No exit punch within the longest shift (%s hours).",
                     backend.max_shift_hours))
+                if declared is None:
+                    # The direction was only a guess, and the guess is now known to be
+                    # wrong: nothing can close a shift that far back. So this punch
+                    # starts a new one.
+                    #
+                    # Discarding it instead -- which is what used to happen here -- left
+                    # the *next* punch guessed as an arrival, and once the alternation
+                    # was a half-step out it never came back into phase. Every evening
+                    # punch then paired with the following morning's, inventing an
+                    # overnight shift a day at a time and losing both real days, for as
+                    # long as the employee kept turning up. One forgotten exit corrupted
+                    # every day after it, which is why this branch is not a tidy-up.
+                    open_entry = punch
+                    expected = "out"
+                    continue
+                # Declared as an exit by the device, so it is evidence and not inference:
+                # an exit that arrived too late to close anything, not a shift starting.
                 plan[punch] = ("unpaired", _(
                     "More than %s hours after the previous entry, so it does not close "
                     "that shift.", backend.max_shift_hours))

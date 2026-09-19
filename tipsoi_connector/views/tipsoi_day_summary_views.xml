@@ -15,8 +15,9 @@
         <field name="day_date"/>
         <field name="employee_id"/>
         <field name="employee_identifier" optional="hide"/>
-        <field name="check_in_utc"/>
+        <field name="check_in_display"/>
         <field name="check_out_utc"/>
+        <field name="check_in_utc" string="Check in (paired)" optional="hide"/>
         <field name="first_punch_utc" optional="show"/>
         <field name="last_punch_utc" optional="hide"/>
         <field name="worked_hours" widget="float_time" sum="Worked"/>
@@ -78,8 +79,9 @@
           <group>
             <group string="Times">
               <field name="day_date"/>
-              <field name="check_in_utc"/>
+              <field name="check_in_display"/>
               <field name="check_out_utc"/>
+              <field name="check_in_utc" string="Check in (paired)"/>
               <field name="first_punch_utc"/>
               <field name="last_punch_utc"/>
               <field name="worked_hours" widget="float_time"/>
@@ -141,6 +143,9 @@
         <field name="employee_identifier"/>
         <field name="day_date"/>
         <field name="backend_id"/>
+        <filter name="hide_former" string="Hide former employees"
+                domain="['|', ('employee_id','=',False), ('employee_id.active','=',True)]"/>
+        <separator/>
         <filter name="present" string="Present"
                 domain="[('day_type','=','present')]"/>
         <filter name="partial" string="Incomplete"
@@ -172,6 +177,12 @@
     <field name="res_model">tipsoi.day.summary</field>
     <field name="view_mode">list,form</field>
     <field name="search_view_id" ref="view_tipsoi_day_summary_search"/>
+    <!--
+      Leavers are hidden by default rather than dropped from the build: their history is
+      real and has to keep rebuilding, so the filter belongs on the screen and not in
+      _build(). One click removes it.
+    -->
+    <field name="context">{'search_default_hide_former': 1}</field>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">No days yet</p>
       <p>On a Device Portal backend these days are built here in Odoo, from the punches
